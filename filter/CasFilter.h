@@ -7,16 +7,17 @@
 #include "BinPack.h"
 #include "help_func.h"
 #include "Stats.h"
-#include "ActionRunner.h"
+#include "CasRunner.h"
 
-namespace Galaxy
+namespace CasLang
 {
+    using namespace Galaxy;
 	class CasFilter:
 		public BaseFilter
 	{
 		double m_fps = 0;
 		Stats m_stats;
-		ActionRunner m_actionRunner;
+		CasLang::CasRunner m_actionRunner;
 	public:	
 		BEGIN_PACKAGE(CasFilter)
 			ADD_BASE(BaseFilter)

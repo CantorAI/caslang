@@ -1,6 +1,6 @@
 #include "xhost.h"
 #include "xpackage.h"
-#include "core/CasLangCode.h"
+#include "core/CasLang.h"
 
 #if (WIN32)
 #include <windows.h>
@@ -63,8 +63,8 @@ extern "C" X_EXPORT void Load(void* pHost,X::Value curModule)
 	GetCurLibInfo((void*)Load, strFullPath, strFolderPath, strLibName);
 	X::g_pXHost = (X::XHost*)pHost;
 
-    // Register CasLangCode
-    X::RegisterPackage<Galaxy::CasLangCode>(strFullPath.c_str(), "caslang", &Galaxy::CasLangCode::I());
+    // Register CasLang
+    X::RegisterPackage<CasLang::CasLangModule>(strFullPath.c_str(), "caslang", &CasLang::CasLangModule::I());
 }
 
 #ifdef BUILD_GALAXY_FILTER
@@ -83,8 +83,10 @@ extern "C"  X_EXPORT void GLoad(const char* libInfo,const char* filterName,
     std::string strFilterName(filterName);
     if (strFilterName == "CasFilter" || strFilterName == "caslang")
     {
-        X::RegisterPackage<Galaxy::CasFilter>(strLibName.c_str(), "CasFilter");
-        Galaxy::CasFilter* pFilter = new Galaxy::CasFilter(libInfo, filterName, (Galaxy::IFactory*)pFactory);
+        // Register under CasFilter alias, but class is CasLang::CasFilter
+        X::RegisterPackage<CasLang::CasFilter>(strLibName.c_str(), "CasFilter");
+        // IFactory is still Galaxy::IFactory? Let's assume yes as it comes from framework.
+        CasLang::CasFilter* pFilter = new CasLang::CasFilter(libInfo, filterName, (Galaxy::IFactory*)pFactory);
         varFilter = X::Value(pFilter->APISET().GetProxy(pFilter), false);
     }
 }

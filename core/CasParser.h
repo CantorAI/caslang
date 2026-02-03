@@ -11,6 +11,8 @@
 
 using json = nlohmann::json;
 
+namespace CasLang {
+
 struct ParsedAction {
     std::vector<std::string> ns; // e.g. {"fs"}
     std::string command;         // e.g. "open"
@@ -19,7 +21,7 @@ struct ParsedAction {
     std::string error;
 };
 
-class ActionParser {
+class CasParser {
 public:
     std::vector<ParsedAction> Extract(const std::string& text) {
         src_ = &text; i_ = 0; n_ = text.size();
@@ -117,3 +119,4 @@ private:
     const std::string* src_{ nullptr };
     size_t i_{ 0 }, n_{ 0 };
 };
+}

@@ -1,30 +1,30 @@
-#include "ActionRunner.h"
+#include "CasRunner.h"
 #include <sstream>
 #include <iostream>
 #include <regex>
 #include <thread> // For sleep
 #include "xlang.h" // For X::Value
 
-namespace Galaxy {
+namespace CasLang {
 
-    ActionRunner::ActionRunner() {
+    CasRunner::CasRunner() {
     }
 
-    ActionRunner::~ActionRunner() {
+    CasRunner::~CasRunner() {
     }
 
-    void ActionRunner::Register(std::unique_ptr<ActionOps> op) {
+    void CasRunner::Register(std::unique_ptr<CasOps> op) {
         if (op) {
             m_ops[op->Namespace()] = std::move(op);
         }
     }
 
-    void ActionRunner::LogError(const std::string& msg) {
+    void CasRunner::LogError(const std::string& msg) {
         std::cerr << "[CasLang Error] " << msg << std::endl;
     }
 
     // Basic parser for #ns.cmd{json}
-    bool ActionRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args) {
+    bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args) {
         if (line.empty()) return false;
         size_t hashPos = line.find('#');
         if (hashPos == std::string::npos) return false;
@@ -63,7 +63,7 @@ namespace Galaxy {
 
     // Helper: Find matching end block (supports nesting)
     // blockType: "if" or "loop" or "retry"
-    size_t ActionRunner::FindBlockEnd(const std::vector<std::string>& lines, size_t startLine, const std::string& blockType) {
+    size_t CasRunner::FindBlockEnd(const std::vector<std::string>& lines, size_t startLine, const std::string& blockType) {
         int depth = 1;
         std::string startCmd = "#flow." + blockType;
         if (blockType == "loop") startCmd = "#flow.loop_start";
@@ -89,7 +89,7 @@ namespace Galaxy {
     }
 
     // Special for IF: find next at same level: else, or endif
-    size_t ActionRunner::FindElseOrEndif(const std::vector<std::string>& lines, size_t startLine) {
+    size_t CasRunner::FindElseOrEndif(const std::vector<std::string>& lines, size_t startLine) {
          int depth = 1;
          for (size_t i = startLine + 1; i < lines.size(); ++i) {
             std::string line = lines[i];
@@ -154,7 +154,7 @@ namespace Galaxy {
         int delay;
     };
 
-    ActionRunner::Result ActionRunner::Run(const std::string& script) {
+    CasRunner::Result CasRunner::Run(const std::string& script) {
         m_ctx.break_flag = false;
         m_ctx.continue_flag = false;
         m_ctx.return_flag = false;

@@ -1,0 +1,17 @@
+#time.now{"as":"start_time"}
+#num.range{"start":0, "end":50, "as":"list_data"}
+#flow.set{"name":"total", "value":0}
+#flow.loop_start{"var":"i", "in":"${list_data}"}
+    #num.mul{"a":"${i}", "b":2, "as":"v2"}
+    #num.add{"a":"${total}", "b":"${v2}", "as":"total"}
+    #str.upper{"s":"item_${i}", "as":"s_upper"}
+    #fs.write_file{"path":"temp_${i}.txt", "content":"${s_upper}"}
+#flow.loop_end{}
+
+#flow.loop_start{"var":"j", "in":"${list_data}"}
+    #fs.delete{"path":"temp_${j}.txt"}
+#flow.loop_end{}
+
+#time.now{"as":"end_time"}
+#num.sub{"a":"${end_time}", "b":"${start_time}", "as":"duration"}
+#flow.return{"value":"Duration: ${duration} ms, Total: ${total}"}

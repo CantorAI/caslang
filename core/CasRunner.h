@@ -3,12 +3,12 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
-#include "ActionOps.h"
+#include "CasOps.h"
 
-namespace Galaxy {
-    class ActionRunner {
-        std::unordered_map<std::string, std::unique_ptr<ActionOps>> m_ops;
-        ActionContext m_ctx;
+namespace CasLang {
+    class CasRunner {
+        std::unordered_map<std::string, std::unique_ptr<CasOps>> m_ops;
+        CasContext m_ctx;
 
         // Helpers
         bool ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args);
@@ -19,10 +19,10 @@ namespace Galaxy {
         size_t FindElseOrEndif(const std::vector<std::string>& lines, size_t startLine);
 
     public:
-        ActionRunner();
-        ~ActionRunner();
+        CasRunner();
+        ~CasRunner();
 
-        void Register(std::unique_ptr<ActionOps> op);
+        void Register(std::unique_ptr<CasOps> op);
 
         struct Result {
             bool success;

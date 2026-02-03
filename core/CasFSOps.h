@@ -1,5 +1,5 @@
 #pragma once
-#include "ActionOps.h"
+#include "CasOps.h"
 #include <filesystem>
 #include <fstream>
 #include <system_error>
@@ -11,7 +11,7 @@
 
 namespace fs = std::filesystem;
 
-namespace Galaxy {
+namespace CasLang {
 
 #include <stdexcept>
 
@@ -123,7 +123,7 @@ inline std::string to_json_stat(const std::string& pathStr, std::error_code& ec)
     return out;
 }
 
-class ActionFSOps : public ActionOps {
+class CasFSOps : public CasOps {
 public:
     const std::string& Namespace() const override {
         static std::string k = "fs";
@@ -134,7 +134,7 @@ public:
     X::Value Execute(const std::vector<std::string>& ns_parts,
         const std::string& command,
         std::unordered_map<std::string, X::Value>& args,
-        ActionContext& ctx,
+        CasContext& ctx,
         std::vector<std::string>& errs) override
     {
         (void)ns_parts;

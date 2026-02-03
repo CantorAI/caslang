@@ -1,10 +1,10 @@
 #pragma once
-#include "ActionOps.h"
+#include "CasOps.h"
 #include <thread>
 #include <chrono>
 
-namespace Galaxy {
-    class ActionTimeOps : public ActionOps {
+namespace CasLang {
+    class CasTimeOps : public CasOps {
     public:
         const std::string& Namespace() const override {
             static std::string k = "time";
@@ -14,7 +14,7 @@ namespace Galaxy {
         X::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
             std::unordered_map<std::string, X::Value>& args,
-            ActionContext& ctx,
+            CasContext& ctx,
             std::vector<std::string>& errs) override
         {
             if (command == "now") {

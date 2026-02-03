@@ -1,12 +1,12 @@
 #pragma once
-#include "ActionOps.h"
+#include "CasOps.h"
 #include <algorithm>
 #include <thread>
 #include <chrono>
 
-namespace Galaxy {
+namespace CasLang {
 
-    class ActionNumOps : public ActionOps {
+    class CasNumOps : public CasOps {
     public:
          const std::string& Namespace() const override {
             static std::string k = "num";
@@ -16,7 +16,7 @@ namespace Galaxy {
         X::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
             std::unordered_map<std::string, X::Value>& args,
-            ActionContext& ctx,
+            CasContext& ctx,
             std::vector<std::string>& errs) override
         {
             auto D = [&](const char* k, double def = 0.0)->double {
@@ -41,6 +41,18 @@ namespace Galaxy {
             }
             if (command == "min") return X::Value((std::min)(a, b));
             if (command == "max") return X::Value((std::max)(a, b));
+            if (command == "range") {
+                int start = (int)D("start", 0);
+                int end = (int)D("end", 10);
+                int step = (int)D("step", 1);
+                std::string res = "[";
+                for (int i = start; i < end; i += step) {
+                     if (i > start) res += ",";
+                     res += std::to_string(i);
+                }
+                res += "]";
+                return X::Value(res);
+            }
 
             errs.push_back("num: unknown command " + command);
             return X::Value();

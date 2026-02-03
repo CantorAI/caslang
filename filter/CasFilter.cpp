@@ -4,10 +4,10 @@
 #include <fstream>
 #include "port.h"
 #include "GalaxyFrame.h"
-#include "ActionStringOps.h"
-#include "ActionFSOps.h"
-#include "ActionNumOps.h"
-#include "ActionTimeOps.h"
+#include "CasStringOps.h"
+#include "CasFSOps.h"
+#include "CasNumOps.h"
+#include "CasTimeOps.h"
 
 // Helper function: UTF-8 to UTF-16
 std::wstring UTF8ToWString(const std::string& utf8) {
@@ -23,8 +23,9 @@ std::wstring UTF8ToWString(const std::string& utf8) {
 #endif
 }
 
-namespace Galaxy
+namespace CasLang
 {
+    using namespace Galaxy;
 
     void CasFilter::RegMetrics()
     {
@@ -100,10 +101,10 @@ namespace Galaxy
     CasFilter::CasFilter()
     {
         m_filterTypeName = "CasFilter";
-        m_actionRunner.Register(std::make_unique<StringOps>());
-		m_actionRunner.Register(std::make_unique<ActionFSOps>());
-        m_actionRunner.Register(std::make_unique<ActionNumOps>());
-        m_actionRunner.Register(std::make_unique<ActionTimeOps>());
+        m_actionRunner.Register(std::make_unique<CasLang::CasStringOps>());
+		m_actionRunner.Register(std::make_unique<CasLang::CasFSOps>());
+        m_actionRunner.Register(std::make_unique<CasLang::CasNumOps>());
+        m_actionRunner.Register(std::make_unique<CasLang::CasTimeOps>());
     }
     void CasFilter::Run()
     {

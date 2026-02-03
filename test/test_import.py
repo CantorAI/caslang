@@ -28,7 +28,8 @@ try:
         "2_ops/1_str.cas",
         "2_ops/2_num.cas",
         "2_ops/3_fs.cas",
-        "2_ops/4_time.cas"
+        "2_ops/4_time.cas",
+        "4_intensive/1_benchmark.cas"
     ]
     
     for rel_path in test_files:

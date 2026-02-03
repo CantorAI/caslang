@@ -1,10 +1,10 @@
 #pragma once
-#include "ActionOps.h"
+#include "CasOps.h"
 #include <algorithm>
 #include <regex>
 
-namespace Galaxy {
-    class StringOps : public ActionOps {
+namespace CasLang {
+    class CasStringOps : public CasOps {
     public:
         const std::string& Namespace() const override {
             static std::string k = "str";
@@ -14,7 +14,7 @@ namespace Galaxy {
         X::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
             std::unordered_map<std::string, X::Value>& args,
-            ActionContext& ctx,
+            CasContext& ctx,
             std::vector<std::string>& errs) override
         {
             auto S = [&](const char* k, const std::string& def = "")->std::string {

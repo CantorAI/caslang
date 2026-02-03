@@ -5,8 +5,8 @@
 #include "xpackage.h"
 #include "xlang.h"
 
-namespace Galaxy {
-    struct ActionContext {
+namespace CasLang {
+    struct CasContext {
         std::unordered_map<std::string, X::Value> vars;
         X::Value _last;
         
@@ -19,10 +19,10 @@ namespace Galaxy {
         // Recursion/Loop limits could go here
     };
 
-    class ActionOps {
+    class CasOps {
     public:
-        virtual ~ActionOps() {}
-        virtual bool Init(ActionContext& ctx) { return true; }
+        virtual ~CasOps() {}
+        virtual bool Init(CasContext& ctx) { return true; }
         // Namespace prefix for this Op set (e.g. "fs", "str")
         virtual const std::string& Namespace() const = 0;
 
@@ -41,7 +41,7 @@ namespace Galaxy {
         virtual X::Value Execute(const std::vector<std::string>& ns_parts, 
                                  const std::string& command, 
                                  std::unordered_map<std::string, X::Value>& args, 
-                                 ActionContext& ctx, 
+                                 CasContext& ctx, 
                                  std::vector<std::string>& errs) = 0;
     };
 }
