@@ -138,196 +138,205 @@ public:
         std::vector<std::string>& errs) override
     {
         (void)ns_parts;
-
-        auto S = [&](const char* k, const std::string& def = "")->std::string {
-            auto it = args.find(k);
-            return (it != args.end() && it->second.isString()) ? it->second.asString() : def;
-            };
-        auto B = [&](const char* k, bool def = false)->bool {
-            auto it = args.find(k);
-            return (it != args.end() && it->second.isBool()) ? it->second.asBool() : def;
-            };
-        auto I64 = [&](const char* k, int64_t def = 0)->int64_t {
-            auto it = args.find(k);
-            return (it != args.end() && it->second.isNumber()) ? static_cast<int64_t>(it->second.asNumber()) : def;
-            };
-
-        // Common control keys (already handled by runner for as/return)
-        (void)ctx;
-
-        if (command == "read_file") {
-            std::string path = S("path");
-            if (path.empty()) { errs.push_back("fs.read_file: missing 'path'"); return X::Value(); }
-            int64_t max_bytes = I64("max_bytes", -1);
-            int64_t offset = I64("offset", 0);
-
-            // Use Unicode-aware file opening
-            std::ifstream f = open_input_stream(path, std::ios::binary);
-            if (!f) { errs.push_back("fs.read_file: cannot open: " + path); return X::Value(); }
-            if (offset > 0) f.seekg(offset, std::ios::beg);
-
-            std::string data;
-            if (max_bytes >= 0) {
-                data.resize((size_t)max_bytes);
-                f.read(&data[0], (std::streamsize)max_bytes);
-                data.resize((size_t)f.gcount());
-            }
-            else {
-                f.seekg(0, std::ios::end);
-                std::streampos end = f.tellg();
-                std::streampos start = offset > 0 ? std::streampos(offset) : std::streampos(0);
-                if (end < start) { errs.push_back("fs.read_file: offset beyond EOF"); return X::Value(); }
-                std::streamsize len = end - start;
-                data.resize((size_t)len);
-                f.seekg(start, std::ios::beg);
-                f.read(&data[0], len);
-            }
-            return X::Value(data);
-        }
-
-        if (command == "write_file") {
-            std::string path = S("path");
-            std::string data = S("data");
-            bool append = B("append", false);
-            if (path.empty()) { errs.push_back("fs.write_file: missing 'path'"); return X::Value(); }
-
-            std::ios::openmode flags = std::ios::binary | std::ios::out | (append ? std::ios::app : std::ios::trunc);
-            // Use Unicode-aware file opening
-            std::ofstream f = open_output_stream(path, flags);
-            if (!f) { errs.push_back("fs.write_file: cannot open: " + path); return X::Value(); }
-            f.write(data.data(), (std::streamsize)data.size());
-            if (!f) { errs.push_back("fs.write_file: write failed"); return X::Value(); }
-            return X::Value((int64_t)data.size());
-        }
-
-        if (command == "list") {
-            std::string dir = S("dir");
-            std::string pattern = S("pattern", "*");
-            bool recursive = B("recursive", false);
-            bool include_dirs = B("include_dirs", false);
-
-            if (dir.empty()) { errs.push_back("fs.list: missing 'dir'"); return X::Value("[]"); }
-
-            std::error_code ec;
-            std::vector<std::string> out;
-
-            // Use Unicode-aware path creation
-            fs::path dirPath = create_fs_path(dir);
-
-            if (!recursive) {
-                if (!fs::exists(dirPath, ec) || !fs::is_directory(dirPath, ec)) {
-                    errs.push_back("fs.list: not a directory: " + dir);
-                    return X::Value("[]");
+        try {
+            auto S = [&](const char* k, const std::string& def = "")->std::string {
+                auto it = args.find(k);
+                return (it != args.end() && it->second.isString()) ? it->second.asString() : def;
+                };
+            auto B = [&](const char* k, bool def = false)->bool {
+                auto it = args.find(k);
+                return (it != args.end() && it->second.isBool()) ? it->second.asBool() : def;
+                };
+            auto I64 = [&](const char* k, int64_t def = 0)->int64_t {
+                auto it = args.find(k);
+                return (it != args.end() && it->second.isNumber()) ? static_cast<int64_t>(it->second.asNumber()) : def;
+                };
+    
+            // Common control keys (already handled by runner for as/return)
+            (void)ctx;
+    
+            if (command == "read_file") {
+                std::string path = S("path");
+                if (path.empty()) { errs.push_back("fs.read_file: missing 'path'"); return X::Value(); }
+                int64_t max_bytes = I64("max_bytes", -1);
+                int64_t offset = I64("offset", 0);
+    
+                // Use Unicode-aware file opening
+                std::ifstream f = open_input_stream(path, std::ios::binary);
+                if (!f) { errs.push_back("fs.read_file: cannot open: " + path); return X::Value(); }
+                if (offset > 0) f.seekg(offset, std::ios::beg);
+    
+                std::string data;
+                if (max_bytes >= 0) {
+                    data.resize((size_t)max_bytes);
+                    f.read(&data[0], (std::streamsize)max_bytes);
+                    data.resize((size_t)f.gcount());
                 }
-                for (auto& e : fs::directory_iterator(dirPath, ec)) {
-                    if (ec) break;
-                    auto name = e.path().filename().u8string(); // Use u8string() for UTF-8 output
-                    bool isdir = fs::is_directory(e.path(), ec);
-                    if (!include_dirs && isdir) continue;
-                    if (fs_matches_pattern(name, pattern)) {
-                        out.push_back((dirPath / name).u8string());  // full path
+                else {
+                    f.seekg(0, std::ios::end);
+                    std::streampos end = f.tellg();
+                    std::streampos start = offset > 0 ? std::streampos(offset) : std::streampos(0);
+                    if (end < start) { errs.push_back("fs.read_file: offset beyond EOF"); return X::Value(); }
+                    std::streamsize len = end - start;
+                    data.resize((size_t)len);
+                    f.seekg(start, std::ios::beg);
+                    f.read(&data[0], len);
+                }
+                return X::Value(data);
+            }
+    
+            if (command == "write_file") {
+                std::string path = S("path");
+                std::string data = S("data");
+                bool append = B("append", false);
+                if (path.empty()) { errs.push_back("fs.write_file: missing 'path'"); return X::Value(); }
+    
+                std::ios::openmode flags = std::ios::binary | std::ios::out | (append ? std::ios::app : std::ios::trunc);
+                // Use Unicode-aware file opening
+                std::ofstream f = open_output_stream(path, flags);
+                if (!f) { errs.push_back("fs.write_file: cannot open: " + path); return X::Value(); }
+                f.write(data.data(), (std::streamsize)data.size());
+                if (!f) { errs.push_back("fs.write_file: write failed"); return X::Value(); }
+                return X::Value((int64_t)data.size());
+            }
+    
+            if (command == "list") {
+                std::string dir = S("dir");
+                std::string pattern = S("pattern", "*");
+                bool recursive = B("recursive", false);
+                bool include_dirs = B("include_dirs", false);
+    
+                if (dir.empty()) { errs.push_back("fs.list: missing 'dir'"); return X::Value("[]"); }
+    
+                std::error_code ec;
+                std::vector<std::string> out;
+    
+                // Use Unicode-aware path creation
+                fs::path dirPath = create_fs_path(dir);
+    
+                if (!recursive) {
+                    if (!fs::exists(dirPath, ec) || !fs::is_directory(dirPath, ec)) {
+                        errs.push_back("fs.list: not a directory: " + dir);
+                        return X::Value("[]");
+                    }
+                    for (auto& e : fs::directory_iterator(dirPath, ec)) {
+                        if (ec) break;
+                        auto name = e.path().filename().u8string(); // Use u8string() for UTF-8 output
+                        bool isdir = fs::is_directory(e.path(), ec);
+                        if (!include_dirs && isdir) continue;
+                        if (fs_matches_pattern(name, pattern)) {
+                            out.push_back((dirPath / name).u8string());  // full path
+                        }
                     }
                 }
-            }
-            else {
-                for (auto& e : fs::recursive_directory_iterator(dirPath, ec)) {
-                    if (ec) break;
-                    auto rel = fs::relative(e.path(), dirPath, ec).u8string(); // Use u8string() for UTF-8 output
-                    bool isdir = fs::is_directory(e.path(), ec);
-                    if (!include_dirs && isdir) continue;
-                    if (fs_matches_pattern(rel, pattern)) {
-                        out.push_back(e.path().u8string());  // full absolute path
+                else {
+                    for (auto& e : fs::recursive_directory_iterator(dirPath, ec)) {
+                        if (ec) break;
+                        auto rel = fs::relative(e.path(), dirPath, ec).u8string(); // Use u8string() for UTF-8 output
+                        bool isdir = fs::is_directory(e.path(), ec);
+                        if (!include_dirs && isdir) continue;
+                        if (fs_matches_pattern(rel, pattern)) {
+                            out.push_back(e.path().u8string());  // full absolute path
+                        }
                     }
                 }
+                return X::Value(to_json_array(out));
             }
-            return X::Value(to_json_array(out));
+    
+            if (command == "delete") {
+                std::string path = S("path");
+                bool recursive = B("recursive", false);
+                if (path.empty()) { errs.push_back("fs.delete: missing 'path'"); return X::Value(); }
+                std::error_code ec;
+    
+                // Use Unicode-aware path creation
+                fs::path fsPath = create_fs_path(path);
+                if (recursive) fs::remove_all(fsPath, ec); else fs::remove(fsPath, ec);
+                if (ec) { errs.push_back("fs.delete: " + ec.message()); return X::Value(); }
+                return X::Value(true);
+            }
+    
+            if (command == "copy") {
+                std::string src = S("src");
+                std::string dst = S("dst");
+                bool overwrite = B("overwrite", false);
+                bool recursive = B("recursive", true);
+                if (src.empty() || dst.empty()) { errs.push_back("fs.copy: missing 'src' or 'dst'"); return X::Value(); }
+    
+                std::error_code ec;
+                auto opts = fs::copy_options::none;
+                if (recursive) opts |= fs::copy_options::recursive;
+                opts |= overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::skip_existing;
+    
+                // Use Unicode-aware path creation
+                fs::path srcPath = create_fs_path(src);
+                fs::path dstPath = create_fs_path(dst);
+                fs::copy(srcPath, dstPath, opts, ec);
+                if (ec) { errs.push_back("fs.copy: " + ec.message()); return X::Value(); }
+                return X::Value(true);
+            }
+    
+            if (command == "move") {
+                std::string src = S("src");
+                std::string dst = S("dst");
+                bool overwrite = B("overwrite", false);
+                if (src.empty() || dst.empty()) { errs.push_back("fs.move: missing 'src' or 'dst'"); return X::Value(); }
+                std::error_code ec;
+    
+                // Use Unicode-aware path creation
+                fs::path srcPath = create_fs_path(src);
+                fs::path dstPath = create_fs_path(dst);
+    
+                if (overwrite && fs::exists(dstPath, ec)) { fs::remove_all(dstPath, ec); }
+                fs::rename(srcPath, dstPath, ec);
+                if (ec) { errs.push_back("fs.move: " + ec.message()); return X::Value(); }
+                return X::Value(true);
+            }
+    
+            if (command == "mkdir") {
+                std::string path = S("path");
+                bool recursive = B("recursive", true);
+                if (path.empty()) { errs.push_back("fs.mkdir: missing 'path'"); return X::Value(); }
+                std::error_code ec;
+    
+                // Use Unicode-aware path creation
+                fs::path fsPath = create_fs_path(path);
+                bool ok = recursive ? fs::create_directories(fsPath, ec) : fs::create_directory(fsPath, ec);
+                if (ec) { errs.push_back("fs.mkdir: " + ec.message()); return X::Value(); }
+                (void)ok;
+                return X::Value(true);
+            }
+    
+            if (command == "stat") {
+                std::string path = S("path");
+                if (path.empty()) { errs.push_back("fs.stat: missing 'path'"); return X::Value("{}"); }
+                std::error_code ec;
+                return X::Value(to_json_stat(path, ec));
+            }
+    
+            if (command == "exists") {
+                std::string path = S("path");
+                if (path.empty()) { errs.push_back("fs.exists: missing 'path'"); return X::Value(); }
+                std::error_code ec;
+    
+                // Use Unicode-aware path creation
+                fs::path fsPath = create_fs_path(path);
+                bool ex = fs::exists(fsPath, ec);
+                if (ec) { errs.push_back("fs.exists: " + ec.message()); return X::Value(); }
+                return X::Value(ex);
+            }
+    
+            errs.push_back("fs: unknown command: " + command);
+            return X::Value();
+        } 
+        catch (const std::exception& e) {
+            errs.push_back(std::string("fs exception: ") + e.what());
+            return X::Value();
         }
-
-        if (command == "delete") {
-            std::string path = S("path");
-            bool recursive = B("recursive", false);
-            if (path.empty()) { errs.push_back("fs.delete: missing 'path'"); return X::Value(); }
-            std::error_code ec;
-
-            // Use Unicode-aware path creation
-            fs::path fsPath = create_fs_path(path);
-            if (recursive) fs::remove_all(fsPath, ec); else fs::remove(fsPath, ec);
-            if (ec) { errs.push_back("fs.delete: " + ec.message()); return X::Value(); }
-            return X::Value(true);
+        catch (...) {
+            errs.push_back("fs exception: unknown");
+            return X::Value();
         }
-
-        if (command == "copy") {
-            std::string src = S("src");
-            std::string dst = S("dst");
-            bool overwrite = B("overwrite", false);
-            bool recursive = B("recursive", true);
-            if (src.empty() || dst.empty()) { errs.push_back("fs.copy: missing 'src' or 'dst'"); return X::Value(); }
-
-            std::error_code ec;
-            auto opts = fs::copy_options::none;
-            if (recursive) opts |= fs::copy_options::recursive;
-            opts |= overwrite ? fs::copy_options::overwrite_existing : fs::copy_options::skip_existing;
-
-            // Use Unicode-aware path creation
-            fs::path srcPath = create_fs_path(src);
-            fs::path dstPath = create_fs_path(dst);
-            fs::copy(srcPath, dstPath, opts, ec);
-            if (ec) { errs.push_back("fs.copy: " + ec.message()); return X::Value(); }
-            return X::Value(true);
-        }
-
-        if (command == "move") {
-            std::string src = S("src");
-            std::string dst = S("dst");
-            bool overwrite = B("overwrite", false);
-            if (src.empty() || dst.empty()) { errs.push_back("fs.move: missing 'src' or 'dst'"); return X::Value(); }
-            std::error_code ec;
-
-            // Use Unicode-aware path creation
-            fs::path srcPath = create_fs_path(src);
-            fs::path dstPath = create_fs_path(dst);
-
-            if (overwrite && fs::exists(dstPath, ec)) { fs::remove_all(dstPath, ec); }
-            fs::rename(srcPath, dstPath, ec);
-            if (ec) { errs.push_back("fs.move: " + ec.message()); return X::Value(); }
-            return X::Value(true);
-        }
-
-        if (command == "mkdir") {
-            std::string path = S("path");
-            bool recursive = B("recursive", true);
-            if (path.empty()) { errs.push_back("fs.mkdir: missing 'path'"); return X::Value(); }
-            std::error_code ec;
-
-            // Use Unicode-aware path creation
-            fs::path fsPath = create_fs_path(path);
-            bool ok = recursive ? fs::create_directories(fsPath, ec) : fs::create_directory(fsPath, ec);
-            if (ec) { errs.push_back("fs.mkdir: " + ec.message()); return X::Value(); }
-            (void)ok;
-            return X::Value(true);
-        }
-
-        if (command == "stat") {
-            std::string path = S("path");
-            if (path.empty()) { errs.push_back("fs.stat: missing 'path'"); return X::Value("{}"); }
-            std::error_code ec;
-            return X::Value(to_json_stat(path, ec));
-        }
-
-        if (command == "exists") {
-            std::string path = S("path");
-            if (path.empty()) { errs.push_back("fs.exists: missing 'path'"); return X::Value(); }
-            std::error_code ec;
-
-            // Use Unicode-aware path creation
-            fs::path fsPath = create_fs_path(path);
-            bool ex = fs::exists(fsPath, ec);
-            if (ec) { errs.push_back("fs.exists: " + ec.message()); return X::Value(); }
-            return X::Value(ex);
-        }
-
-        errs.push_back("fs: unknown command: " + command);
-        return X::Value();
     }
 
     // Command catalog for LLM/system prompts
