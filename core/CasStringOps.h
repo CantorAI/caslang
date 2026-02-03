@@ -28,14 +28,14 @@ namespace CasLang {
             if (command == "print") {
                 std::string msg = S("msg");
                 if (msg.empty()) msg = s; // Fallback to 's' if 'msg' not present
-                std::cout << "[CasLang Print] [Line " << ctx.current_line << "] " << msg << std::endl;
+                std::cout << "[CasLang L" << ctx.current_line << "] " << msg << std::endl;
                 return X::Value(true);
             }
             
             if (command == "log") {
                 std::string msg = S("msg");
                 if (msg.empty()) msg = s;
-                std::string logLine = "[Line " + std::to_string(ctx.current_line) + "] " + msg;
+                std::string logLine = "[L" + std::to_string(ctx.current_line) + "] " + msg;
                 ctx.logs.push_back(logLine);
                 return X::Value(true);
             }
