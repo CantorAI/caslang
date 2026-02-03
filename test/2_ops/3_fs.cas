@@ -1,2 +1,52 @@
-#fs.exists{"path":"non_existent_file","as":"e"}
-#flow.return{"value":"${e}"}
+#flow.set{"name":"root","value":"d:/test/caslang_fs_test"}
+#str.print{"msg":"Starting FS Test in ${root}"}
+
+#fs.exists{"path":"${root}","as":"exists"}
+#flow.if{"cond":"${exists}"}
+    #str.print{"msg":"Cleaning up previous test dir..."}
+    #fs.delete{"path":"${root}","recursive":true}
+#flow.endif{}
+
+#str.print{"msg":"Creating directory..."}
+#fs.mkdir{"path":"${root}","recursive":true,"as":"ok"}
+#str.print{"msg":"Mkdir result: '${ok}'"}
+#flow.if{"cond":"!${ok}"}
+    #str.print{"msg":"Failed to create directory"}
+    #flow.return{"value":false}
+#flow.endif{}
+
+#str.print{"msg":"Writing file..."}
+#fs.write_file{"path":"${root}/test.txt","data":"hello world","as":"bytes"}
+#flow.if{"cond":"${bytes} != 11"}
+    #str.print{"msg":"Write failed, bytes mismatch. Expected 11, got ${bytes}"}
+    #flow.return{"value":false}
+#flow.endif{}
+
+#str.print{"msg":"Reading file..."}
+#fs.read_file{"path":"${root}/test.txt","as":"content"}
+#flow.if{"cond":"\"${content}\" != \"hello world\""}
+    #str.print{"msg":"Read mismatch. Expected 'hello world', got '${content}'"}
+    #flow.return{"value":false}
+#flow.endif{}
+
+#str.print{"msg":"Copying file..."}
+#fs.copy{"src":"${root}/test.txt","dst":"${root}/copy.txt"}
+#fs.exists{"path":"${root}/copy.txt","as":"exists"}
+#flow.if{"cond":"!${exists}"}
+    #str.print{"msg":"Copy failed"}
+    #flow.return{"value":false}
+#flow.endif{}
+
+#str.print{"msg":"Listing files..."}
+#fs.list{"dir":"${root}","as":"list"}
+#str.print{"msg":"List result: ${list}"}
+
+#str.print{"msg":"Stat file..."}
+#fs.stat{"path":"${root}/test.txt","as":"meta"}
+#str.print{"msg":"Stat result: ${meta}"}
+
+#str.print{"msg":"Cleaning up..."}
+#fs.delete{"path":"${root}","recursive":true}
+
+#str.print{"msg":"FS Test Complete"}
+#flow.return{"value":true}

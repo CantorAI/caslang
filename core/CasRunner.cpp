@@ -174,9 +174,19 @@ namespace CasLang {
 
     // Condition Evaluator (Simple)
     bool EvaluateCond(const std::string& cond) {
+        std::string t = cond;
+        // Trim
+        t.erase(0, t.find_first_not_of(" \t"));
+        t.erase(t.find_last_not_of(" \t") + 1);
+
+        if (t.empty()) return false;
+        if (t[0] == '!') {
+            return !EvaluateCond(t.substr(1));
+        }
+
         std::regex re(R"(\s*(.*?)\s*(==|!=|>=|<=|>|<)\s*(.*)\s*)");
         std::smatch m;
-        if (std::regex_match(cond, m, re)) {
+        if (std::regex_match(t, m, re)) {
             std::string lhs = m[1];
             std::string op = m[2];
             std::string rhs = m[3];
@@ -208,10 +218,14 @@ namespace CasLang {
                 if (op == "<") return lStr < rStr;
             }
         }
-        if (cond == "true") return true;
-        if (cond == "false") return false;
-        try { if (std::stod(cond) != 0.0) return true; } catch(...) {}
-        return !cond.empty() && cond != "\"\"" && cond != "null";
+        
+        std::string lower = t;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        if (lower == "true") return true;
+        if (lower == "false") return false;
+
+        try { if (std::stod(t) != 0.0) return true; } catch(...) {}
+        return !t.empty() && t != "\"\"" && t != "null";
     }
 
     // Retry State
