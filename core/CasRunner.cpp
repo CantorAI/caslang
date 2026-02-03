@@ -268,6 +268,7 @@ namespace CasLang {
         // 3. PC Loop
         size_t pc = 0;
         while (pc < lines.size()) {
+            m_ctx.current_line = (int)pc + 1;
             std::string line = lines[pc];
             if (line.empty() || line[0] != '#') { pc++; continue; }
 

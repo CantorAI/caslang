@@ -20,6 +20,7 @@ namespace CasLang {
         
         // Execution Logs (for LLM debug)
         std::vector<std::string> logs;
+        int current_line = 0;
     };
 
     class CasOps {
