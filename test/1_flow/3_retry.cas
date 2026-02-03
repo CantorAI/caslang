@@ -1,0 +1,9 @@
+#flow.set{"name":"i","value":0}
+#flow.retry_start{"count":4,"delay":0}
+    #num.add{"a":"${i}","b":1,"as":"i"}
+    #flow.if{"cond":"${i} < 3"}
+       #time.sleep{"ms":1}
+       #fs.read_file{"path":"missing_force_error"} 
+    #flow.endif{}
+#flow.retry_end{}
+#flow.return{"value":"${i}"}

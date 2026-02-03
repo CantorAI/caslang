@@ -1,0 +1,4 @@
+#time.now{"as":"t1"}
+#time.sleep{"ms":10}
+#time.now{"as":"t2"}
+#flow.return{"value":"done"}

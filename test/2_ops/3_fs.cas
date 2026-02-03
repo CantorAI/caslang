@@ -1,0 +1,2 @@
+#fs.exists{"path":"non_existent_file","as":"e"}
+#flow.return{"value":"${e}"}

@@ -1,0 +1,388 @@
+#include "ActionRunner.h"
+#include <sstream>
+#include <iostream>
+#include <regex>
+#include <thread> // For sleep
+#include "xlang.h" // For X::Value
+
+namespace Galaxy {
+
+    ActionRunner::ActionRunner() {
+    }
+
+    ActionRunner::~ActionRunner() {
+    }
+
+    void ActionRunner::Register(std::unique_ptr<ActionOps> op) {
+        if (op) {
+            m_ops[op->Namespace()] = std::move(op);
+        }
+    }
+
+    void ActionRunner::LogError(const std::string& msg) {
+        std::cerr << "[CasLang Error] " << msg << std::endl;
+    }
+
+    // Basic parser for #ns.cmd{json}
+    bool ActionRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args) {
+        if (line.empty()) return false;
+        size_t hashPos = line.find('#');
+        if (hashPos == std::string::npos) return false;
+
+        size_t bracePos = line.find('{', hashPos);
+        if (bracePos == std::string::npos) return false;
+
+        std::string fullCmd = line.substr(hashPos + 1, bracePos - (hashPos + 1));
+        
+        size_t dotPos = fullCmd.find('.');
+        if (dotPos == std::string::npos) return false;
+        ns = fullCmd.substr(0, dotPos);
+        cmd = fullCmd.substr(dotPos + 1);
+
+        size_t closeBrace = line.rfind('}');
+        if (closeBrace == std::string::npos || closeBrace < bracePos) return false;
+
+        std::string jsonStr = line.substr(bracePos, closeBrace - bracePos + 1);
+        
+        X::Runtime rt;
+        X::Package json(rt, "json", "");
+        X::Value jsonVal = json["loads"](jsonStr);
+
+        if (!jsonVal.IsObject()) {
+            LogError("Args must be JSON object: " + jsonStr);
+            return false;
+        }
+
+        X::Dict dict(jsonVal);
+        dict->Enum([&](X::Value& k, X::Value& v){
+            args[k.asString()] = v;
+        });
+
+        return true;
+    }
+
+    // Helper: Find matching end block (supports nesting)
+    // blockType: "if" or "loop" or "retry"
+    size_t ActionRunner::FindBlockEnd(const std::vector<std::string>& lines, size_t startLine, const std::string& blockType) {
+        int depth = 1;
+        std::string startCmd = "#flow." + blockType;
+        if (blockType == "loop") startCmd = "#flow.loop_start";
+        else if (blockType == "retry") startCmd = "#flow.retry_start";
+        else startCmd = "#flow.if";
+
+        std::string endCmd = "#flow." + blockType + "_end"; 
+        if (blockType == "if") endCmd = "#flow.endif";
+        if (blockType == "loop") endCmd = "#flow.loop_end";
+        if (blockType == "retry") endCmd = "#flow.retry_end";
+
+        for (size_t i = startLine + 1; i < lines.size(); ++i) {
+            std::string line = lines[i];
+            // Normalize line checks?
+            if (line.find(startCmd) != std::string::npos) {
+                depth++;
+            } else if (line.find(endCmd) != std::string::npos) {
+                depth--;
+                if (depth == 0) return i;
+            }
+        }
+        return lines.size();
+    }
+
+    // Special for IF: find next at same level: else, or endif
+    size_t ActionRunner::FindElseOrEndif(const std::vector<std::string>& lines, size_t startLine) {
+         int depth = 1;
+         for (size_t i = startLine + 1; i < lines.size(); ++i) {
+            std::string line = lines[i];
+            if (line.find("#flow.if") != std::string::npos) {
+                depth++;
+            } else if (line.find("#flow.endif") != std::string::npos) {
+                depth--;
+                if (depth == 0) return i;
+            } else if (line.find("#flow.else") != std::string::npos) {
+                if (depth == 1) return i;
+            }
+        }
+        return lines.size();
+    }
+
+    // Condition Evaluator (Simple)
+    bool EvaluateCond(const std::string& cond) {
+        std::regex re(R"(\s*(.*?)\s*(==|!=|>=|<=|>|<)\s*(.*)\s*)");
+        std::smatch m;
+        if (std::regex_match(cond, m, re)) {
+            std::string lhs = m[1];
+            std::string op = m[2];
+            std::string rhs = m[3];
+            
+            double lNum = 0, rNum = 0;
+            bool lIsNum = false, rIsNum = false;
+            try { lNum = std::stod(lhs); lIsNum = true; } catch(...) {}
+            try { rNum = std::stod(rhs); rIsNum = true; } catch(...) {}
+
+            auto strip = [](std::string s) {
+                if (s.size() >= 2 && s.front() == '"' && s.back() == '"') return s.substr(1, s.size()-2);
+                if (s.size() >= 2 && s.front() == '\'' && s.back() == '\'') return s.substr(1, s.size()-2);
+                return s;
+            };
+
+            if (lIsNum && rIsNum) {
+                if (op == "==") return lNum == rNum;
+                if (op == "!=") return lNum != rNum;
+                if (op == ">") return lNum > rNum;
+                if (op == "<") return lNum < rNum;
+                if (op == ">=") return lNum >= rNum;
+                if (op == "<=") return lNum <= rNum;
+            } else {
+                std::string lStr = strip(lhs);
+                std::string rStr = strip(rhs);
+                if (op == "==") return lStr == rStr;
+                if (op == "!=") return lStr != rStr;
+                if (op == ">") return lStr > rStr;
+                if (op == "<") return lStr < rStr;
+            }
+        }
+        if (cond == "true") return true;
+        if (cond == "false") return false;
+        try { if (std::stod(cond) != 0.0) return true; } catch(...) {}
+        return !cond.empty() && cond != "\"\"" && cond != "null";
+    }
+
+    // Retry State
+    struct RetryState {
+        size_t startPc; // Index of retry_start line
+        int count;
+        int delay;
+    };
+
+    ActionRunner::Result ActionRunner::Run(const std::string& script) {
+        m_ctx.break_flag = false;
+        m_ctx.continue_flag = false;
+        m_ctx.return_flag = false;
+        m_ctx._last = X::Value();
+
+        // 1. Split into lines
+        std::vector<std::string> lines;
+        std::istringstream iss(script);
+        std::string l;
+        while (std::getline(iss, l)) {
+             size_t first = l.find_first_not_of(" \t\r\n");
+             if (first == std::string::npos) lines.push_back(""); 
+             else {
+                 size_t last = l.find_last_not_of(" \t\r\n");
+                 lines.push_back(l.substr(first, last - first + 1));
+             }
+        }
+
+        std::vector<std::pair<size_t, size_t>> loopStack;
+        std::vector<RetryState> retryStack;
+
+        // 2. PC Loop
+        size_t pc = 0;
+        while (pc < lines.size()) {
+            std::string line = lines[pc];
+            if (line.empty() || line[0] != '#') { pc++; continue; }
+
+            std::string ns, cmd;
+            std::unordered_map<std::string, X::Value> args;
+            if (!ParseLine(line, ns, cmd, args)) {
+                 pc++; continue;
+            }
+
+            // Substitute variables in args
+             for (auto& kv : args) {
+                if (kv.second.isString()) {
+                    std::string s = kv.second.asString();
+                    size_t pos = 0;
+                    while ((pos = s.find("${", pos)) != std::string::npos) {
+                        size_t end = s.find('}', pos);
+                        if (end != std::string::npos) {
+                            std::string varName = s.substr(pos + 2, end - (pos + 2));
+                            std::string valStr;
+                            if (varName == "_last") valStr = m_ctx._last.IsValid() ? m_ctx._last.asString() : "null";
+                            else if (m_ctx.vars.count(varName)) valStr = m_ctx.vars[varName].asString();
+                            
+                            s.replace(pos, end - pos + 1, valStr);
+                        }
+                        pos++; 
+                    }
+                    kv.second = X::Value(s);
+                }
+            }
+
+            // --- Flow Control ---
+            bool isErr = false;
+            std::string errMsg;
+
+            if (ns == "flow") {
+                if (cmd == "set") {
+                    if (args.count("name") && args.count("value")) {
+                        m_ctx.vars[args["name"].asString()] = args["value"];
+                    }
+                }
+                else if (cmd == "get") {
+                     if (args.count("name")) {
+                         std::string name = args["name"].asString();
+                         if (m_ctx.vars.count(name)) m_ctx._last = m_ctx.vars[name];
+                     }
+                }
+                else if (cmd == "if") {
+                    std::string cond = args["cond"].asString();
+                    if (!EvaluateCond(cond)) {
+                        size_t nextPt = FindElseOrEndif(lines, pc);
+                        pc = nextPt; 
+                        if (pc < lines.size() && lines[pc].find("#flow.else") != std::string::npos) {
+                             pc++; continue; 
+                        }
+                    }
+                }
+                else if (cmd == "else") {
+                    size_t i = pc + 1;
+                    int depth = 1; 
+                    while(i < lines.size()) {
+                        if (lines[i].find("#flow.if") != std::string::npos) depth++;
+                        else if (lines[i].find("#flow.endif") != std::string::npos) {
+                            depth--;
+                            if (depth == 0) { pc = i; break; }
+                        }
+                        i++;
+                    }
+                }
+                else if (cmd == "endif") {
+                }
+                else if (cmd == "loop_start") {
+                     std::string varName = args["var"].asString();
+                     std::string listJson = args["in"].asString();
+                     X::Value listVal;
+                     // Parse list
+                     if (listJson.size()>=2 && listJson.front()=='[' && listJson.back()==']') {
+                         X::Runtime rt;
+                         X::Package json(rt, "json", "");
+                         listVal = json["loads"](listJson);
+                     } else {
+                         // Maybe variable reference that wasn't substituted? Or simple string?
+                         // For now, assume it MUST be a JSON list
+                         LogError("loop_start: 'in' must be a JSON list found:" + listJson);
+                         isErr = true;
+                         // Handle error?
+                     }
+
+                     if (!isErr && listVal.IsList()) {
+                         X::List list(listVal);
+                         long long size = list.Size();
+                         
+                         // Check if we are re-entering (iterating)
+                         if (!loopStack.empty() && loopStack.back().first == pc) {
+                             // Increment
+                             loopStack.back().second++;
+                         } else {
+                             // New Loop
+                             loopStack.push_back({pc, 0});
+                         }
+
+                         long long idx = (long long)loopStack.back().second;
+                         if (idx < size) {
+                             m_ctx.vars[varName] = list[idx];
+                             // Proceed to next line (body)
+                         } else {
+                             // Used up
+                             loopStack.pop_back();
+                             // Skip to end
+                             size_t end = FindBlockEnd(lines, pc, "loop");
+                             pc = end; 
+                             continue; // Skip the pc++ at end of loop
+                         }
+                     } else {
+                         // Not a list or error
+                         if(!isErr) LogError("loop_start: 'in' is not a list");
+                     }
+                }
+                else if (cmd == "loop_end") {
+                     if (!loopStack.empty()) {
+                         size_t start = loopStack.back().first;
+                         pc = start; // Jump back to loop_start
+                         continue;
+                     }
+                }
+                else if (cmd == "break") {
+                    if (!loopStack.empty()) {
+                        size_t start = loopStack.back().first;
+                        size_t end = FindBlockEnd(lines, start, "loop");
+                        pc = end; 
+                        loopStack.pop_back();
+                    }
+                }
+                else if (cmd == "retry_start") {
+                    int count = 3;
+                    int delay = 1000;
+                    if (args.count("count")) count = args["count"].isNumber() ? (int)args["count"] : std::stoi(args["count"].asString());
+                    if (args.count("delay")) delay = args["delay"].isNumber() ? (int)args["delay"] : std::stoi(args["delay"].asString());
+                    
+                    // Only push if not already effectively retrying? 
+                    // No, retry_start defines a new retry scope.
+                    // But if we jump back, we increment PC so we don't re-execute this unless we jump to THIS line.
+                    // My logic below jumps to startPc + 1. So we execute retry_start ONCE per entry.
+                    retryStack.push_back({pc, count, delay});
+                }
+                else if (cmd == "retry_end") {
+                    if (!retryStack.empty()) {
+                        retryStack.pop_back();
+                    }
+                }
+                else if (cmd == "return") {
+                    if (args.count("value")) m_ctx.return_value = args["value"];
+                    else m_ctx.return_value = m_ctx._last;
+                    m_ctx.return_flag = true;
+                    return { true, "", m_ctx.return_value };
+                }
+            }
+            else {
+                // Execute Op
+                std::vector<std::string> errs;
+                if (m_ops.count(ns)) {
+                    m_ctx._last = m_ops[ns]->Execute({ns}, cmd, args, m_ctx, errs);
+                    if (!errs.empty()) {
+                        isErr = true;
+                        errMsg = errs[0];
+                    }
+                    if (args.count("as")) {
+                        m_ctx.vars[args["as"].asString()] = m_ctx._last;
+                    }
+                    if (args.count("return") && args["return"].IsTrue()) {
+                         m_ctx.return_value = m_ctx._last;
+                         m_ctx.return_flag = true;
+                         return { true, "", m_ctx._last };
+                    }
+                } else {
+                    isErr = true;
+                    errMsg = "Unknown namespace: " + ns;
+                }
+            }
+
+            // Error Handling & Retry Logic
+            if (isErr) {
+                if (!retryStack.empty()) {
+                    RetryState& rs = retryStack.back();
+                    if (rs.count > 0) {
+                        rs.count--;
+                        LogError("Error caught (" + errMsg + "), retrying... " + std::to_string(rs.count) + " left");
+                        std::this_thread::sleep_for(std::chrono::milliseconds(rs.delay));
+                        pc = rs.startPc + 1; // Jump to instruction AFTER retry_start
+                        continue;
+                    }
+                    else {
+                        LogError(errMsg + " (Retry exhausted)");
+                        return { false, errMsg, X::Value() };
+                    }
+                }
+                else {
+                    LogError(errMsg);
+                    return { false, errMsg, X::Value() };
+                }
+            }
+
+            pc++;
+        }
+        
+        return { true, "", m_ctx._last };
+    }
+}

@@ -1,0 +1,7 @@
+#flow.set{"name":"x","value":5}
+#flow.if{"cond":"${x} > 3"}
+    #flow.set{"name":"res","value":"big"}
+#flow.else{}
+    #flow.set{"name":"res","value":"small"}
+#flow.endif{}
+#flow.return{"value":"${res}"}

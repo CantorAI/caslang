@@ -11,8 +11,23 @@
 
 namespace fs = std::filesystem;
 
+namespace Galaxy {
+
+#include <stdexcept>
+
 // Helper function: UTF-8 to UTF-16
-std::wstring UTF8ToWString(const std::string& utf8);
+inline std::wstring UTF8ToWString(const std::string& utf8) {
+#if (WIN32)
+    if (utf8.empty()) return std::wstring();
+    int wstrLength = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (wstrLength <= 0) return std::wstring();
+    std::wstring wstr(wstrLength - 1, L'\0');
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wstr[0], wstrLength);
+    return wstr;
+#else
+    return std::wstring(utf8.begin(), utf8.end());
+#endif
+}
 
 // Helper function to open input stream with Unicode support
 inline std::ifstream open_input_stream(const std::string& path, std::ios::openmode mode = std::ios::in) {
@@ -317,7 +332,7 @@ public:
 
     // Command catalog for LLM/system prompts
     std::vector<CommandInfo> DescribeCommands() const override {
-        using A = Arg;
+        using A = CommandInfo::Arg;
         std::vector<CommandInfo> v;
 
         v.push_back(CommandInfo{
@@ -468,3 +483,5 @@ public:
         return v;
     }
 };
+
+} // namespace Galaxy

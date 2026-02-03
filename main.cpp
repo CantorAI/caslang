@@ -3,6 +3,7 @@
 #include "core/CasLangCode.h"
 
 #if (WIN32)
+#include <windows.h>
 #define X_EXPORT __declspec(dllexport) 
 #else
 #define X_EXPORT

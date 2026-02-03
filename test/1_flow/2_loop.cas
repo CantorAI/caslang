@@ -1,0 +1,5 @@
+#flow.set{"name":"sum","value":0}
+#flow.loop_start{"var":"i","in":"[1,2,3]"}
+    #num.add{"a":"${sum}","b":"${i}","as":"sum"}
+#flow.loop_end{}
+#flow.return{"value":"${sum}"}

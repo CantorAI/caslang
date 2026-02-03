@@ -6,6 +6,8 @@
 #include "GalaxyFrame.h"
 #include "ActionStringOps.h"
 #include "ActionFSOps.h"
+#include "ActionNumOps.h"
+#include "ActionTimeOps.h"
 
 // Helper function: UTF-8 to UTF-16
 std::wstring UTF8ToWString(const std::string& utf8) {
@@ -65,9 +67,9 @@ namespace Galaxy
 
             X::Dict dictPrompts(prompts);
             X::Value varRole = dictPrompts->Get("msg_type");
-            std::string role = varRole.IsValid() ? varRole.ToString() : "user";
+            std::string role = varRole.IsValid() ? varRole.asString() : "user";
             X::Value varContent = dictPrompts->Get("message");
-            content = varContent.ToString();
+            content = varContent.asString();
         }
         auto results = m_actionRunner.Run(content);
 
@@ -79,7 +81,7 @@ namespace Galaxy
         pOutFrm->Head()->uid_h = inputFrame.Head()->uid_h;
         pOutFrm->Head()->sessionId = inputFrame.Head()->sessionId;
         pOutFrm->Head()->startTime = getCurMilliTimeStamp();
-        std::string strResults = results.output.ToString();
+        std::string strResults = results.output.asString();
         int retDataSize = (int)strResults.size();
         pOutFrm->Head()->dataSize = retDataSize;
         char* pBuf = pOutFrm->AllocMemory();
@@ -100,6 +102,8 @@ namespace Galaxy
         m_filterTypeName = "CasFilter";
         m_actionRunner.Register(std::make_unique<StringOps>());
 		m_actionRunner.Register(std::make_unique<ActionFSOps>());
+        m_actionRunner.Register(std::make_unique<ActionNumOps>());
+        m_actionRunner.Register(std::make_unique<ActionTimeOps>());
     }
     void CasFilter::Run()
     {

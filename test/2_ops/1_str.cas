@@ -1,0 +1,2 @@
+#str.upper{"s":"abc","as":"u"}
+#flow.return{"value":"${u}"}
