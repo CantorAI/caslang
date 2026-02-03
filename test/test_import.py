@@ -20,7 +20,8 @@ try:
         "2_ops/2_num.cas",
         "2_ops/3_fs.cas",
         "2_ops/4_time.cas",
-        "4_intensive/1_benchmark.cas"
+        "4_intensive/1_benchmark.cas",
+        "4_intensive/2_line_count.cas"
     ]
     
     print("\n=== RUNNING NORMAL TESTS ===")

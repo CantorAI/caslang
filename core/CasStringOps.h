@@ -95,6 +95,18 @@ namespace CasLang {
                 return X::Value(s.substr(start, end - start));
             }
 
+            if (command == "count") {
+                std::string sub = S("sub");
+                if (sub.empty()) return X::Value((long long)0);
+                long long count = 0;
+                size_t pos = 0;
+                while ((pos = s.find(sub, pos)) != std::string::npos) {
+                    count++;
+                    pos += sub.length();
+                }
+                return X::Value(count);
+            }
+
             errs.push_back("str: unknown command " + command);
             return X::Value();
         }

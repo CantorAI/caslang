@@ -1,0 +1,35 @@
+#flow.set{"name":"root","value":"D:/CantorAI1/Cantor_FastUdp"}
+#str.print{"msg":"[Start] Counting lines in: ${root}"}
+
+#fs.list{"dir":"${root}","recursive":true,"as":"filesJson"}
+#flow.set{"name":"totalLines","value":0}
+#flow.set{"name":"fileCount","value":0}
+
+#loop.start{"var":"file","in":"${filesJson}"}
+    #str.lower{"s":"${file}","as":"pathLower"}
+    #str.slice{"s":"${pathLower}","start":-4,"as":"ext4"}
+    #str.slice{"s":"${pathLower}","start":-2,"as":"ext2"}
+    
+    #flow.set{"name":"isSrc","value":false}
+    #flow.if{"cond":"\"${ext4}\" == \".cpp\""}
+        #flow.set{"name":"isSrc","value":true}
+    #flow.endif{}
+    #flow.if{"cond":"\"${ext2}\" == \".h\""}
+        #flow.set{"name":"isSrc","value":true}
+    #flow.endif{}
+
+    #flow.if{"cond":"${isSrc}"}
+        #fs.read_file{"path":"${file}","as":"content"}
+        #str.count{"s":"${content}","sub":"\n","as":"lines"}
+        #num.add{"x":"${lines}","y":1,"as":"lines"}
+        
+        #num.add{"x":"${totalLines}","y":"${lines}","as":"totalLines"}
+        #num.add{"x":"${fileCount}","y":1,"as":"fileCount"}
+        #str.print{"msg":"[FILE] ${file}: ${lines} lines"}
+    #flow.endif{}
+#loop.end{}
+
+#str.print{"msg":"[Complete] Scanned ${fileCount} files."}
+#str.print{"msg":"[Complete] Total lines: ${totalLines}"}
+#str.log{"msg":"[LOG] Total lines: ${totalLines}"}
+#flow.return{"value":"${totalLines}"}
