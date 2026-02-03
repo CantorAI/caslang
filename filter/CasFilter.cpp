@@ -32,7 +32,7 @@ namespace CasLang
         X::Value cantor = m_pFactory->GetCantor();
         auto metrics_mgr = cantor["Metrics"]();
         auto registerMetrics = metrics_mgr["registerMetrics"];
-        X::Func FPS_Fetch("CasFilter_FPS",
+        X::Func FPS_Fetch("CasLangFilter_FPS",
             (X::U_FUNC)[this](X::XRuntime* rt, X::XObj* pThis, X::XObj* pContext,
                 X::ARGS& params, X::KWARGS& kwParams,
                 X::Value& retValue)
@@ -40,7 +40,7 @@ namespace CasLang
                 retValue = m_fps;
                 return true;
             });
-        registerMetrics(cantor,"CasFilter_FPS", FPS_Fetch);
+        registerMetrics(cantor,"CasLangFilter_FPS", FPS_Fetch);
 
     }
     bool CasFilter::onPinPutFrame(IPin* pin, X::Value& frame)
@@ -100,7 +100,7 @@ namespace CasLang
     }
     CasFilter::CasFilter()
     {
-        m_filterTypeName = "CasFilter";
+        m_filterTypeName = "CasLangFilter";
         m_actionRunner.Register(std::make_unique<CasLang::CasStringOps>());
 		m_actionRunner.Register(std::make_unique<CasLang::CasFSOps>());
         m_actionRunner.Register(std::make_unique<CasLang::CasNumOps>());

@@ -81,10 +81,10 @@ extern "C"  X_EXPORT void GLoad(const char* libInfo,const char* filterName,
 	X::g_pXHost = (X::XHost*)pXlangHost;
     
     std::string strFilterName(filterName);
-    if (strFilterName == "CasFilter" || strFilterName == "caslang")
+    if (strFilterName == "CasLangFilter")
     {
-        // Register under CasFilter alias, but class is CasLang::CasFilter
-        X::RegisterPackage<CasLang::CasFilter>(strLibName.c_str(), "CasFilter");
+        // Register under CasLangFilter alias, but class is CasLang::CasFilter
+        X::RegisterPackage<CasLang::CasFilter>(strLibName.c_str(), "CasLangFilter");
         // IFactory is still Galaxy::IFactory? Let's assume yes as it comes from framework.
         CasLang::CasFilter* pFilter = new CasLang::CasFilter(libInfo, filterName, (Galaxy::IFactory*)pFactory);
         varFilter = X::Value(pFilter->APISET().GetProxy(pFilter), false);
