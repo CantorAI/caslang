@@ -33,6 +33,9 @@ try:
             # X::Value wrapper for Dict
             if res.get("success"):
                 print(f"[{rel_path}] PASSED (Data: {res.get('data')})")
+                logs = res.get("logs")
+                if logs:
+                    print(f"Captured Logs: {logs}")
             else:
                 err = res.get("error")
                 print(f"[{rel_path}] UNEXPECTED FAILURE: {err.get('message')} at line {err.get('line')}")

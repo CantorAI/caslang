@@ -31,6 +31,13 @@ namespace CasLang {
                 std::cout << "[CasLang Print] " << msg << std::endl;
                 return X::Value(true);
             }
+            
+            if (command == "log") {
+                std::string msg = S("msg");
+                if (msg.empty()) msg = s;
+                ctx.logs.push_back(msg);
+                return X::Value(true);
+            }
 
             if (command == "len") {
                 return X::Value((long long)s.size());

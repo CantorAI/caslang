@@ -239,7 +239,9 @@ namespace CasLang {
         m_ctx.break_flag = false;
         m_ctx.continue_flag = false;
         m_ctx.return_flag = false;
+        m_ctx.return_flag = false;
         m_ctx._last = X::Value();
+        m_ctx.logs.clear();
 
         // 1. Split into lines
         std::vector<std::string> lines;

@@ -1,5 +1,6 @@
 #flow.set{"name":"root","value":"d:/test/caslang_fs_test"}
 #str.print{"msg":"Starting FS Test in ${root}"}
+#str.log{"msg":"[LOG] Starting FS Test"}
 
 #fs.exists{"path":"${root}","as":"exists"}
 #flow.if{"cond":"${exists}"}
@@ -12,6 +13,7 @@
 #str.print{"msg":"Mkdir result: '${ok}'"}
 #flow.if{"cond":"!${ok}"}
     #str.print{"msg":"Failed to create directory"}
+    #str.log{"msg":"[LOG] Failed to create directory"}
     #flow.return{"value":false}
 #flow.endif{}
 
@@ -19,6 +21,7 @@
 #fs.write_file{"path":"${root}/test.txt","data":"hello world","as":"bytes"}
 #flow.if{"cond":"${bytes} != 11"}
     #str.print{"msg":"Write failed, bytes mismatch. Expected 11, got ${bytes}"}
+    #str.log{"msg":"[LOG] Write failed"}
     #flow.return{"value":false}
 #flow.endif{}
 
@@ -26,6 +29,7 @@
 #fs.read_file{"path":"${root}/test.txt","as":"content"}
 #flow.if{"cond":"\"${content}\" != \"hello world\""}
     #str.print{"msg":"Read mismatch. Expected 'hello world', got '${content}'"}
+    #str.log{"msg":"[LOG] Read mismatch"}
     #flow.return{"value":false}
 #flow.endif{}
 
@@ -34,6 +38,7 @@
 #fs.exists{"path":"${root}/copy.txt","as":"exists"}
 #flow.if{"cond":"!${exists}"}
     #str.print{"msg":"Copy failed"}
+    #str.log{"msg":"[LOG] Copy failed"}
     #flow.return{"value":false}
 #flow.endif{}
 
@@ -49,4 +54,5 @@
 #fs.delete{"path":"${root}","recursive":true}
 
 #str.print{"msg":"FS Test Complete"}
+#str.log{"msg":"[LOG] FS Test Complete"}
 #flow.return{"value":true}

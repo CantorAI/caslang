@@ -32,6 +32,9 @@ namespace CasLang {
         };
 
         Result Run(const std::string& script);
+        
+        const CasContext& GetContext() const { return m_ctx; }
+
     private:
         Result ValidateScript(const std::vector<std::string>& lines);
     };

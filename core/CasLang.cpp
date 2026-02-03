@@ -41,6 +41,15 @@ namespace CasLang {
         
         X::Dict out;
         out->Set("success", result.success);
+
+        // Populate logs
+        X::List logList;
+        for (const auto& l : m_runner.GetContext().logs) {
+            X::Value v(l);
+            logList->AddItem(v);
+        }
+        out->Set("logs", logList);
+
         if (result.success) {
             out->Set("data", result.output);
         } else {

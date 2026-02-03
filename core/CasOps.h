@@ -17,6 +17,9 @@ namespace CasLang {
         X::Value return_value;
 
         // Recursion/Loop limits could go here
+        
+        // Execution Logs (for LLM debug)
+        std::vector<std::string> logs;
     };
 
     class CasOps {
