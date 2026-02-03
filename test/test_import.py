@@ -1,25 +1,16 @@
 import xlang
 import os
+import json
 
-# Assuming caslang.dll is in the binary path or accessible
 try:
-    # fromPath should be the name of the dll without extension if in path, or full path
-    # In build_all.bat environment it might be just "caslang"
     print("Attempting to import caslang module...")
     caslang_mod = xlang.importModule("caslang", fromPath="caslang")
-    print("CasLang imported successfully:", caslang_mod)
+    print("CasLang imported successfully")
     
-    # Test file run
-    print("Running test.cas...")
-    # Assuming test.cas is in the same folder as this script, or pass absolute path
-    # Python script is in D:\CantorAI\caslang\test\, so is test.cas
-    script_dir = os.getcwd() # Run from bin, need relative path or arg
-    # Since we run from D:\CantorAI\out\build\x64-Debug\bin
-    # And test is in D:\CantorAI\caslang\test
-    # Run all tests in subdirectories
-    # Manually list tests to ensure execution if walk fails
     script_dir = "D:/CantorAI/caslang/test"
-    test_files = [
+    
+    # 1. Normal Tests (Expected Success)
+    normal_tests = [
         "0_general/1_hello.cas",
         "0_general/2_vars.cas",
         "1_flow/1_if.cas",
@@ -32,14 +23,48 @@ try:
         "4_intensive/1_benchmark.cas"
     ]
     
-    for rel_path in test_files:
+    print("\n=== RUNNING NORMAL TESTS ===")
+    for rel_path in normal_tests:
         cas_file = script_dir + "/" + rel_path
         print(f"\n--- Running {rel_path} ---")
         try:
             res = caslang_mod.run(cas_file)
-            print(f"[{rel_path}] Result: {res}")
+            # Since res is now a Dict (JSON object), we can access it
+            # X::Value wrapper for Dict
+            if res.get("success"):
+                print(f"[{rel_path}] PASSED (Data: {res.get('data')})")
+            else:
+                err = res.get("error")
+                print(f"[{rel_path}] UNEXPECTED FAILURE: {err.get('message')} at line {err.get('line')}")
         except Exception as e:
-            print(f"[{rel_path}] FAILED: {e}")
+            print(f"[{rel_path}] EXCEPTION: {e}")
+
+    # 2. Error Tests (Expected Failure)
+    error_tests = [
+        ("5_errors/1_missing_endif.cas", "Unclosed scope: if"),
+        ("5_errors/2_invalid_syntax.cas", "Invalid syntax (must start with #)"),
+        ("5_errors/3_unclosed_loop.cas", "Unclosed scope: loop"),
+        ("5_errors/4_runtime_err.cas", "Unknown namespace: bad_namespace")
+    ]
+    
+    print("\n=== RUNNING ERROR TESTS ===")
+    for rel_path, expected_substr in error_tests:
+        cas_file = script_dir + "/" + rel_path
+        print(f"\n--- Running {rel_path} (Expected Error) ---")
+        try:
+            res = caslang_mod.run(cas_file)
+            if not res.get("success"):
+                err = res.get("error")
+                msg = err.get("message")
+                line = err.get("line")
+                if expected_substr in msg:
+                    print(f"[{rel_path}] PASSED: Correctly caught error '{msg}' at line {line}")
+                else:
+                    print(f"[{rel_path}] FAILED: Caught wrong error '{msg}', expected '{expected_substr}'")
+            else:
+                print(f"[{rel_path}] FAILED: Unexpected success")
+        except Exception as e:
+             print(f"[{rel_path}] EXCEPTION: {e}")
 
     print("\nAll tests completed.")
 

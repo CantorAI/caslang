@@ -1,0 +1,3 @@
+#str.print{"msg":"Start"}
+#flow.loop_start{"var":"i", "in":"[1,2,3]"}
+#str.print{"msg":"Inside Loop"}

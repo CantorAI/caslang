@@ -21,7 +21,13 @@ namespace CasLang {
         std::ifstream t(fileName);
         if (!t.is_open()) {
              std::cerr << "[CasLang] Failed to open file: " << fileName << std::endl;
-             return X::Value(false);
+             X::Dict out;
+             out->Set("success", false);
+             X::Dict err;
+             err->Set("message", "Failed to open file: " + fileName);
+             err->Set("line", 0);
+             out->Set("error", err);
+             return out;
         }
         std::stringstream buffer;
         buffer << t.rdbuf();
@@ -32,6 +38,17 @@ namespace CasLang {
         std::string code = valCode.asString();
         std::cout << "[CasLang] Executing code:\n" << code << std::endl;
         auto result = m_runner.Run(code);
-        return result.output;
+        
+        X::Dict out;
+        out->Set("success", result.success);
+        if (result.success) {
+            out->Set("data", result.output);
+        } else {
+            X::Dict err;
+            err->Set("message", result.error);
+            err->Set("line", result.errorLine);
+            out->Set("error", err);
+        }
+        return out;
     }
 }

@@ -1,0 +1,2 @@
+invalid line should fail validation
+#str.print{"msg":"Should not run"}

@@ -11,7 +11,7 @@ namespace CasLang {
         CasContext m_ctx;
 
         // Helpers
-        bool ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args);
+        bool ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args, std::string& outErr);
         void LogError(const std::string& msg);
         
         // Scan for matching end block
@@ -27,9 +27,12 @@ namespace CasLang {
         struct Result {
             bool success;
             std::string error; // Last error
+            int errorLine = -1;
             X::Value output;   // Final output
         };
 
         Result Run(const std::string& script);
+    private:
+        Result ValidateScript(const std::vector<std::string>& lines);
     };
 }

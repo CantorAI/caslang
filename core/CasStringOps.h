@@ -2,6 +2,7 @@
 #include "CasOps.h"
 #include <algorithm>
 #include <regex>
+#include <iostream>
 
 namespace CasLang {
     class CasStringOps : public CasOps {
@@ -24,6 +25,13 @@ namespace CasLang {
             
             std::string s = S("s");
             
+            if (command == "print") {
+                std::string msg = S("msg");
+                if (msg.empty()) msg = s; // Fallback to 's' if 'msg' not present
+                std::cout << "[CasLang Print] " << msg << std::endl;
+                return X::Value(true);
+            }
+
             if (command == "len") {
                 return X::Value((long long)s.size());
             }

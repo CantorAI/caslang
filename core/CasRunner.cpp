@@ -24,23 +24,35 @@ namespace CasLang {
     }
 
     // Basic parser for #ns.cmd{json}
-    bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args) {
+    bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args, std::string& outErr) {
         if (line.empty()) return false;
         size_t hashPos = line.find('#');
-        if (hashPos == std::string::npos) return false;
+        if (hashPos == std::string::npos) {
+             outErr = "Missing '#' at start of command";
+             return false;
+        }
 
         size_t bracePos = line.find('{', hashPos);
-        if (bracePos == std::string::npos) return false;
+        if (bracePos == std::string::npos) {
+             outErr = "Missing '{' for JSON arguments";
+             return false;
+        }
 
         std::string fullCmd = line.substr(hashPos + 1, bracePos - (hashPos + 1));
         
         size_t dotPos = fullCmd.find('.');
-        if (dotPos == std::string::npos) return false;
+        if (dotPos == std::string::npos) {
+             outErr = "Command format must be #namespace.command";
+             return false;
+        }
         ns = fullCmd.substr(0, dotPos);
         cmd = fullCmd.substr(dotPos + 1);
 
         size_t closeBrace = line.rfind('}');
-        if (closeBrace == std::string::npos || closeBrace < bracePos) return false;
+        if (closeBrace == std::string::npos || closeBrace < bracePos) {
+             outErr = "Missing closing '}' for JSON arguments";
+             return false;
+        }
 
         std::string jsonStr = line.substr(bracePos, closeBrace - bracePos + 1);
         
@@ -49,7 +61,8 @@ namespace CasLang {
         X::Value jsonVal = json["loads"](jsonStr);
 
         if (!jsonVal.IsObject()) {
-            LogError("Args must be JSON object: " + jsonStr);
+            outErr = "Args must be JSON object: " + jsonStr;
+            //LogError(outErr);
             return false;
         }
 
@@ -59,6 +72,60 @@ namespace CasLang {
         });
 
         return true;
+    }
+
+    CasRunner::Result CasRunner::ValidateScript(const std::vector<std::string>& lines) {
+        std::vector<std::string> scopeStack; // "if", "loop", "retry"
+
+        for (size_t i = 0; i < lines.size(); ++i) {
+            std::string line = lines[i];
+            if (line.empty() || line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+
+            // Strict check: Must start with #
+            size_t firstChar = line.find_first_not_of(" \t\r\n");
+            if (line[firstChar] != '#') {
+                return { false, "Line " + std::to_string(i + 1) + ": Invalid syntax (must start with #)", (int)i + 1, X::Value() };
+            }
+
+            // Parse Line
+            std::string ns, cmd, err;
+            std::unordered_map<std::string, X::Value> args;
+            if (!ParseLine(line.substr(firstChar), ns, cmd, args, err)) {
+                return { false, "Line " + std::to_string(i + 1) + ": " + err, (int)i + 1, X::Value() };
+            }
+
+            // Valid Command - Check Flow
+            if (ns == "flow") {
+                if (cmd == "loop_start") scopeStack.push_back("loop");
+                else if (cmd == "if") scopeStack.push_back("if");
+                else if (cmd == "retry_start") scopeStack.push_back("retry");
+                else if (cmd == "loop_end") {
+                    if (scopeStack.empty() || scopeStack.back() != "loop") 
+                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.loop_end", (int)i + 1, X::Value() };
+                    scopeStack.pop_back();
+                }
+                else if (cmd == "retry_end") {
+                    if (scopeStack.empty() || scopeStack.back() != "retry") 
+                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.retry_end", (int)i + 1, X::Value() };
+                    scopeStack.pop_back();
+                }
+                else if (cmd == "endif") {
+                    if (scopeStack.empty() || scopeStack.back() != "if") 
+                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.endif", (int)i + 1, X::Value() };
+                    scopeStack.pop_back();
+                }
+                else if (cmd == "else") {
+                     if (scopeStack.empty() || scopeStack.back() != "if")
+                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.else (not in if)", (int)i + 1, X::Value() };
+                }
+            }
+        }
+
+        if (!scopeStack.empty()) {
+            return { false, "Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value() };
+        }
+
+        return { true, "", -1, X::Value() };
     }
 
     // Helper: Find matching end block (supports nesting)
@@ -173,19 +240,26 @@ namespace CasLang {
              }
         }
 
+        // 2. Validate Phase
+        Result validation = ValidateScript(lines);
+        if (!validation.success) {
+            return validation;
+        }
+
         std::vector<std::pair<size_t, size_t>> loopStack;
         std::vector<RetryState> retryStack;
 
-        // 2. PC Loop
+        // 3. PC Loop
         size_t pc = 0;
         while (pc < lines.size()) {
             std::string line = lines[pc];
             if (line.empty() || line[0] != '#') { pc++; continue; }
 
-            std::string ns, cmd;
+            std::string ns, cmd, err;
             std::unordered_map<std::string, X::Value> args;
-            if (!ParseLine(line, ns, cmd, args)) {
-                 pc++; continue;
+            if (!ParseLine(line, ns, cmd, args, err)) {
+                 // Should be caught by validation, but just in case
+                 return { false, "Runtime Parsing Error: " + err, (int)pc + 1, X::Value() };
             }
 
             // Substitute variables in args
@@ -261,9 +335,8 @@ namespace CasLang {
                      } else {
                          // Maybe variable reference that wasn't substituted? Or simple string?
                          // For now, assume it MUST be a JSON list
-                         LogError("loop_start: 'in' must be a JSON list found:" + listJson);
+                         errMsg = "loop_start: 'in' must be a JSON list found:" + listJson;
                          isErr = true;
-                         // Handle error?
                      }
 
                      if (!isErr && listVal.IsList()) {
@@ -293,7 +366,10 @@ namespace CasLang {
                          }
                      } else {
                          // Not a list or error
-                         if(!isErr) LogError("loop_start: 'in' is not a list");
+                         if(!isErr) {
+                             errMsg = "loop_start: 'in' is not a list";
+                             isErr = true;
+                         }
                      }
                 }
                 else if (cmd == "loop_end") {
@@ -317,10 +393,6 @@ namespace CasLang {
                     if (args.count("count")) count = args["count"].isNumber() ? (int)args["count"] : std::stoi(args["count"].asString());
                     if (args.count("delay")) delay = args["delay"].isNumber() ? (int)args["delay"] : std::stoi(args["delay"].asString());
                     
-                    // Only push if not already effectively retrying? 
-                    // No, retry_start defines a new retry scope.
-                    // But if we jump back, we increment PC so we don't re-execute this unless we jump to THIS line.
-                    // My logic below jumps to startPc + 1. So we execute retry_start ONCE per entry.
                     retryStack.push_back({pc, count, delay});
                 }
                 else if (cmd == "retry_end") {
@@ -332,7 +404,7 @@ namespace CasLang {
                     if (args.count("value")) m_ctx.return_value = args["value"];
                     else m_ctx.return_value = m_ctx._last;
                     m_ctx.return_flag = true;
-                    return { true, "", m_ctx.return_value };
+                    return { true, "", -1, m_ctx.return_value };
                 }
             }
             else {
@@ -350,7 +422,7 @@ namespace CasLang {
                     if (args.count("return") && args["return"].IsTrue()) {
                          m_ctx.return_value = m_ctx._last;
                          m_ctx.return_flag = true;
-                         return { true, "", m_ctx._last };
+                         return { true, "", -1, m_ctx._last };
                     }
                 } else {
                     isErr = true;
@@ -371,18 +443,18 @@ namespace CasLang {
                     }
                     else {
                         LogError(errMsg + " (Retry exhausted)");
-                        return { false, errMsg, X::Value() };
+                        return { false, errMsg, (int)pc + 1, X::Value() };
                     }
                 }
                 else {
                     LogError(errMsg);
-                    return { false, errMsg, X::Value() };
+                    return { false, errMsg, (int)pc + 1, X::Value() };
                 }
             }
 
             pc++;
         }
         
-        return { true, "", m_ctx._last };
+        return { true, "", -1, m_ctx._last };
     }
 }
