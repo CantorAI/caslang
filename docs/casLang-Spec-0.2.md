@@ -186,6 +186,7 @@ Example:
 
 ## **I) VALUE ASSIGNMENT**
 
+
 ```
 #flow.set{"name":"v","value":...}
 ```
@@ -195,6 +196,9 @@ Example:
 * scalar literal
 * expression string starting with `=`
 * stringified JSON representing list/dict (parsed at runtime)
+
+**Behavior:**
+* **Cloning**: If `value` is a list or dict variable (e.g. `"${otherList}"`), a **deep copy** is created. Modifying the new variable does NOT affect the original.
 
 Examples:
 
@@ -209,6 +213,7 @@ Examples:
 
 ### **J1. Create**
 
+
 ```
 #list.new{"as":"l"}
 ```
@@ -222,6 +227,7 @@ Examples:
 Returns: `true`
 
 ### **J3. Remove by index (mutates list)**
+
 
 ```
 #list.remove{"list":"${l}","index":0}
@@ -240,6 +246,7 @@ Stores number in `${n}`
 
 ### **J5. Range generator**
 
+
 ```
 #list.range{"from":0,"to":100,"step":1,"as":"idxs"}
 ```
@@ -254,11 +261,13 @@ Stores number in `${n}`
 
 ### **K1. Create**
 
+
 ```
 #dict.new{"as":"d"}
 ```
 
 ### **K2. Set (mutates dict)**
+
 
 ```
 #dict.set{"dict":"${d}","key":"'k'","value":"${v}"}
@@ -269,6 +278,7 @@ Stores number in `${n}`
 
 ### **K3. Remove (mutates dict; missing key is ok)**
 
+
 ```
 #dict.remove{"dict":"${d}","key":"'k'"}
 ```
@@ -277,11 +287,13 @@ Returns: `true`
 
 ### **K4. Has (boolean)**
 
+
 ```
 #dict.has{"dict":"${d}","key":"'k'","as":"has"}
 ```
 
 ### **K5. Keys (creates NEW list of keys)**
+
 
 ```
 #dict.keys{"dict":"${d}","as":"ks"}
@@ -295,6 +307,7 @@ Returns: `true`
 
 ### **L1. Length**
 
+
 ```
 #str.len{"s":"${x}","as":"n"}
 ```
@@ -303,11 +316,13 @@ Returns: `true`
 
 ### **L2. Trim**
 
+
 ```
 #str.trim{"s":"${x}","as":"t"}
 ```
 
 ### **L3. Lower / Upper**
+
 
 ```
 #str.lower{"s":"${x}","as":"lo"}
@@ -315,6 +330,7 @@ Returns: `true`
 ```
 
 ### **L4. Contains**
+
 
 ```
 #str.contains{"s":"${hay}","needle":"${nd}","as":"has"}
@@ -324,6 +340,7 @@ Returns: `true`
 
 ### **L5. Find**
 
+
 ```
 #str.find{"s":"${hay}","needle":"${nd}","as":"pos"}
 ```
@@ -331,6 +348,7 @@ Returns: `true`
 `${pos}` is number index or -1
 
 ### **L6. Replace**
+
 
 ```
 #str.replace{"s":"${x}","from":"foo","to":"bar","as":"y"}
@@ -340,11 +358,13 @@ Replaces ALL occurrences
 
 ### **L7. Slice (string)**
 
+
 ```
 #str.slice{"s":"${x}","start":0,"end":10,"as":"sub"}
 ```
 
 ### **L8. Match (regex, first match only)**
+
 
 ```
 #str.match{"s":"${x}","regex":"...","case":"sensitive","as":"m"}
@@ -360,17 +380,32 @@ Return in `${m}`:
 
 ### **L9. Count matches (regex)**
 
+
 ```
 #str.count_match{"s":"${x}","regex":"...","case":"sensitive","as":"n"}
 ```
 
 `${n}` is number of non-overlapping matches
 
+### **L10. Count substrings (literal)**
+
+```
+#str.count{"s":"${x}","sub":"...","as":"n"}
+```
+
+### **L11. Print / Log**
+
+```
+#str.print{"msg":"..."}
+#str.log{"msg":"..."}
+```
+
 ---
 
 # **M) FILE OPS (CAPABILITY)**
 
 ### **M1. List**
+
 
 ```
 #fs.list{"dir":"${d}","pattern":"*","recursive":false,"include_dirs":false,"as":"names"}
@@ -380,6 +415,7 @@ Return in `${m}`:
 
 ### **M2. Read**
 
+
 ```
 #fs.read_file{"path":"${p}","offset":0,"max_bytes":-1,"as":"data"}
 ```
@@ -387,6 +423,7 @@ Return in `${m}`:
 `${data}` is string (content may be policy-limited or returned as a handle, host-defined)
 
 ### **M3. Write**
+
 
 ```
 #fs.write_file{"path":"${p}","data":"${buf}","append":false,"as":"ok"}
@@ -396,6 +433,7 @@ Return in `${m}`:
 
 ### **M4. Exists**
 
+
 ```
 #fs.exists{"path":"${p}","as":"ok"}
 ```
@@ -403,6 +441,7 @@ Return in `${m}`:
 `${ok}` is bool
 
 ### **M5. Stat**
+
 
 ```
 #fs.stat{"path":"${p}","as":"st"}
@@ -422,6 +461,7 @@ Access example:
 
 ### **M6. Mkdir**
 
+
 ```
 #fs.mkdir{"path":"${p}","recursive":true}
 ```
@@ -429,6 +469,7 @@ Access example:
 Returns `true`
 
 ### **M7. Delete**
+
 
 ```
 #fs.delete{"path":"${p}","recursive":false}
@@ -438,6 +479,7 @@ Returns `true`
 
 ### **M8. Copy**
 
+
 ```
 #fs.copy{"src":"${a}","dst":"${b}","overwrite":false,"recursive":true}
 ```
@@ -445,6 +487,7 @@ Returns `true`
 Returns `true`
 
 ### **M9. Move**
+
 
 ```
 #fs.move{"src":"${a}","dst":"${b}","overwrite":false}
@@ -455,6 +498,7 @@ Returns `true`
 ---
 
 # **N) TOOL CALL (CAPABILITY, SINGLE BRIDGE)**
+
 
 ```
 #tool.call{"target":"...?" ,"name":"tool.name","args":"${argsVar}","timeout_ms":5000,"as":"r"}
@@ -470,6 +514,7 @@ Returns `true`
 
 # **O) TIME OPS (CAPABILITY)**
 
+
 ```
 #time.now{"as":"t_ms"}
 #time.sleep{"ms":200,"as":"ok"}
@@ -481,6 +526,7 @@ Returns `true`
 ---
 
 # **P) ERROR MODEL (UNIFIED)**
+
 
 Errors have:
 
@@ -495,6 +541,7 @@ Errors have:
 ---
 
 ## **P1) ERROR CODE TABLE**
+
 
 ### **PARSE (E1xxx)**
 
@@ -592,7 +639,32 @@ Errors have:
 
 ---
 
-# **Q) HARD BANS**
+# **Q) RETURN DATA STRUCTURE**
+
+The execution result is a JSON object:
+
+```json
+{
+  "success": true | false,
+  "data": ... ,
+  "logs": [ "log line 1", ... ],
+  "errors": [
+      {
+          "message": "...",
+          "line": 123
+      }
+  ]
+}
+```
+
+* `data`: The value from `#flow.return` or the last executed command result.
+* `logs`: Collected via `#str.log`.
+* `errors`: List of error objects. Present only if `success` is false.
+
+---
+
+# **R) HARD BANS**
+
 
 * No functions, no goto
 * No dot access
