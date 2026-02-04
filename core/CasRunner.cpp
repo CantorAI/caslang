@@ -283,6 +283,22 @@ namespace CasLang {
              for (auto& kv : args) {
                 if (kv.second.isString()) {
                     std::string s = kv.second.asString();
+                    
+                    // Optimization: Check for exact match "${var}" to preserve type
+                    if (s.size() > 3 && s.front() == '$' && s[1] == '{' && s.back() == '}') {
+                        std::string varName = s.substr(2, s.size() - 3);
+                        if (varName == "_last") {
+                            if (m_ctx._last.IsValid()) {
+                                kv.second = m_ctx._last;
+                                continue;
+                            }
+                        }
+                        else if (m_ctx.vars.count(varName)) {
+                            kv.second = m_ctx.vars[varName];
+                            continue;
+                        }
+                    }
+
                     size_t pos = 0;
                     while ((pos = s.find("${", pos)) != std::string::npos) {
                         size_t end = s.find('}', pos);

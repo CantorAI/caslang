@@ -1,0 +1,15 @@
+#flow.set{"name":"root","value":"D:/CantorAI/caslang"}
+#fs.stat{"path":"${root}/core/CasFSOps.h","as":"st"}
+#str.print{"msg":"Full Stat: ${st}"}
+
+#dict.get{"dict":"${st}", "key":"size", "as":"size"}
+#str.print{"msg":"File Size: ${size}"}
+
+#dict.get{"dict":"${st}", "key":"exists", "as":"exists"}
+#str.print{"msg":"File Exists: ${exists}"}
+
+#flow.if{"cond":"${size} > 0"}
+  #str.print{"msg":"Size check passed"}
+#flow.endif{}
+
+#flow.return{"value":"${size}"}

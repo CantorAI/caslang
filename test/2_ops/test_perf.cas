@@ -1,0 +1,13 @@
+#flow.set{"name":"root","value":"D:/CantorAI/caslang"}
+#fs.list{"dir":"${root}","pattern":"*.h","recursive":true,"as":"files"}
+#flow.set{"name":"count","value":0}
+#flow.loop_start{"var":"file","in":"${files}"}
+  #fs.stat{"path":"${file}","as":"st"}
+  #str.print{"msg":"${file} size: ${st}"}
+  #flow.get{"name":"st","as":"st_dict"}
+  #flow.if{"cond":"${st_dict} != null"}
+     #num.add{"a":"${count}","b":1,"as":"new_count"}
+     #flow.set{"name":"count","value":"${new_count}"}
+  #flow.endif{}
+#flow.loop_end{}
+#flow.return{"value":"${count}"}

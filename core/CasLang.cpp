@@ -3,6 +3,7 @@
 #include "CasFSOps.h"
 #include "CasNumOps.h"
 #include "CasTimeOps.h"
+#include "CasDictOps.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -13,6 +14,7 @@ namespace CasLang {
         m_runner.Register(std::make_unique<CasFSOps>());
         m_runner.Register(std::make_unique<CasNumOps>());
         m_runner.Register(std::make_unique<CasTimeOps>());
+        m_runner.Register(std::make_unique<CasDictOps>());
     }
 
     X::Value CasLangModule::Run(X::Value valFileName) {

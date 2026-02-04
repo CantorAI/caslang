@@ -206,10 +206,10 @@ public:
                 bool recursive = B("recursive", false);
                 bool include_dirs = B("include_dirs", false);
     
-                if (dir.empty()) { errs.push_back("fs.list: missing 'dir'"); return X::Value("[]"); }
+                if (dir.empty()) { errs.push_back("fs.list: missing 'dir'"); return X::Value(X::List()); }
     
                 std::error_code ec;
-                std::vector<std::string> out;
+                X::List outList;
     
                 // Use Unicode-aware path creation
                 fs::path dirPath = create_fs_path(dir);
@@ -217,7 +217,7 @@ public:
                 if (!recursive) {
                     if (!fs::exists(dirPath, ec) || !fs::is_directory(dirPath, ec)) {
                         errs.push_back("fs.list: not a directory: " + dir);
-                        return X::Value("[]");
+                        return X::Value(X::List());
                     }
                     for (auto& e : fs::directory_iterator(dirPath, ec)) {
                         if (ec) break;
@@ -225,7 +225,7 @@ public:
                         bool isdir = fs::is_directory(e.path(), ec);
                         if (!include_dirs && isdir) continue;
                         if (fs_matches_pattern(name, pattern)) {
-                            out.push_back((dirPath / name).u8string());  // full path
+                            outList += (dirPath / name).u8string();  // full path
                         }
                     }
                 }
@@ -236,11 +236,11 @@ public:
                         bool isdir = fs::is_directory(e.path(), ec);
                         if (!include_dirs && isdir) continue;
                         if (fs_matches_pattern(rel, pattern)) {
-                            out.push_back(e.path().u8string());  // full absolute path
+                            outList += e.path().u8string();  // full absolute path
                         }
                     }
                 }
-                return X::Value(to_json_array(out));
+                return X::Value(outList);
             }
     
             if (command == "delete") {
@@ -308,10 +308,29 @@ public:
             }
     
             if (command == "stat") {
-                std::string path = S("path");
-                if (path.empty()) { errs.push_back("fs.stat: missing 'path'"); return X::Value("{}"); }
+                std::string pathStr = S("path");
+                if (pathStr.empty()) { errs.push_back("fs.stat: missing 'path'"); return X::Value(X::Dict()); }
                 std::error_code ec;
-                return X::Value(to_json_stat(path, ec));
+                
+                fs::path p = create_fs_path(pathStr);
+                bool exists = fs::exists(p, ec);
+                if (ec) return X::Value(X::Dict()); // Empty dict or error?
+                
+                bool is_dir = false, is_file = false;
+                uintmax_t size = 0;
+                if (exists) {
+                    is_dir = fs::is_directory(p, ec);
+                    is_file = fs::is_regular_file(p, ec);
+                    if (is_file) size = fs::file_size(p, ec);
+                }
+                
+                X::Dict d;
+                d->Set("path", pathStr);
+                d->Set("exists", exists);
+                d->Set("is_dir", is_dir);
+                d->Set("is_file", is_file);
+                d->Set("size", (long long)size);
+                return X::Value(d);
             }
     
             if (command == "exists") {
