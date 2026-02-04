@@ -1,0 +1,23 @@
+#flow.set{"name":"results","value":{}}
+#flow.set{"name":"test_name","value":"Spec v2 List Ops"}
+
+#flow.set{"name":"my_list","value":[]}
+#list.append{"list":"${my_list}","value":10}
+#list.append{"list":"${my_list}","value":20}
+#list.len{"list":"${my_list}","as":"l_len"}
+
+#flow.if{"cond":"${l_len} == 2"}
+    #dict.set{"dict":"${results}","key":"'list_len'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'list_len'","value":false}
+#flow.endif{}
+
+#list.range{"from":0,"to":5,"step":1,"as":"rng"}
+#list.len{"list":"${rng}","as":"rng_len"}
+#flow.if{"cond":"${rng_len} == 5"}
+    #dict.set{"dict":"${results}","key":"'list_range'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'list_range'","value":false}
+#flow.endif{}
+
+#flow.return{"value":"${results}"}

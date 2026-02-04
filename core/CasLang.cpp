@@ -4,6 +4,8 @@
 #include "CasNumOps.h"
 #include "CasTimeOps.h"
 #include "CasDictOps.h"
+#include "CasListOps.h"
+#include "xlang.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -18,9 +20,9 @@ namespace CasLang {
         std::ifstream t(fileName);
         if (!t.is_open()) {
              std::cerr << "[CasLang] Failed to open file: " << fileName << std::endl;
-             X::Dict out;
+             X::Dict out(X::g_pXHost->CreateDict());
              out->Set("success", false);
-             X::Dict err;
+             X::Dict err(X::g_pXHost->CreateDict());
              err->Set("message", "Failed to open file: " + fileName);
              err->Set("line", 0);
              out->Set("error", err);
@@ -40,29 +42,39 @@ namespace CasLang {
         runner.Register(std::make_unique<CasFSOps>());
         runner.Register(std::make_unique<CasNumOps>());
         runner.Register(std::make_unique<CasTimeOps>());
-        runner.Register(std::make_unique<CasDictOps>());
+        runner.Register(std::make_unique<CasDictOps>()); // RESTORED
+        runner.Register(std::make_unique<CasListOps>()); // RESTORED
 
-        auto result = runner.Run(code);
+        CasRunner::Result res = runner.Run(code);
         
-        X::Dict out;
-        out->Set("success", result.success);
+        // DEBUG PRINT
+        std::cout << "[CasLang DEBUG] Run finished. Success: " << res.success << std::endl;
+        if (!res.success) std::cout << "[CasLang DEBUG] Error: " << res.error << std::endl;
 
-        // Populate logs
-        X::List logList;
-        for (const auto& l : runner.GetContext().logs) {
+        X::Dict out(X::g_pXHost->CreateDict());
+        out->Set("success", res.success);
+
+        // Copy logs (COMMENTED OUT TO ISOLATE BRIDGE ISSUE)
+        /*
+        X::List logs;
+        for(const auto& l : runner.GetContext().logs) {
             X::Value v(l);
-            logList->AddItem(v);
+            logs->AddItem(v);
         }
-        out->Set("logs", logList);
-
-        if (result.success) {
-            out->Set("data", result.output);
+        out->Set("logs", logs);
+        */
+        if (res.success) {
+            out->Set("data", res.output);
         } else {
-            X::Dict err;
-            err->Set("message", result.error);
-            err->Set("line", result.errorLine);
+            X::Dict err(X::g_pXHost->CreateDict());
+            err->Set("message", res.error);
+            err->Set("line", res.errorLine);
             out->Set("error", err);
         }
-        return out;
+        // Use internal JSON package to serialize to string
+        X::Runtime rt;
+        X::Package json(rt, "json", "");
+        X::Value jsonStr = json["dumps"](out);
+        return jsonStr; 
     }
 }

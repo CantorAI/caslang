@@ -1,0 +1,21 @@
+#flow.set{"name":"results","value":{}}
+#flow.set{"name":"test_name","value":"Spec v2 Expressions"}
+
+#flow.set{"name":"a","value":5}
+#flow.set{"name":"b","value":3}
+#flow.set{"name":"add_res","value":"=${a} + ${b}"}
+#flow.set{"name":"mul_res","value":"=${a} * ${b}"}
+
+#flow.if{"cond":"${add_res} == 8"}
+    #dict.set{"dict":"${results}","key":"'expr_add'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'expr_add'","value":false}
+#flow.endif{}
+
+#flow.if{"cond":"${mul_res} == 15"}
+    #dict.set{"dict":"${results}","key":"'expr_mul'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'expr_mul'","value":false}
+#flow.endif{}
+
+#flow.return{"value":"${results}"}

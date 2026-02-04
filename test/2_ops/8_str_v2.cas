@@ -1,0 +1,14 @@
+#flow.set{"name":"results","value":{}}
+#flow.set{"name":"test_name","value":"Spec v2 String Ops"}
+
+#flow.set{"name":"s","value":"Hello World World"}
+#str.count{"s":"${s}","sub":"World","as":"cnt"}
+#str.log{"msg":"Count result: ${cnt}"}
+
+#flow.if{"cond":"${cnt} == 2"}
+    #dict.set{"dict":"${results}","key":"'str_count'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'str_count'","value":false}
+#flow.endif{}
+
+#flow.return{"value":"${results}"}

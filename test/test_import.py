@@ -19,11 +19,24 @@ try:
         "2_ops/1_str.cas",
         "2_ops/2_num.cas",
         "2_ops/3_fs.cas",
-        "2_ops/test_perf.cas",
-        "2_ops/test_dict.cas",
         "2_ops/4_time.cas",
+        "2_ops/6_dict.cas",
+        "2_ops/7_expr.cas",
+        "2_ops/8_str_v2.cas",
+        "2_ops/9_list.cas",
+        "2_ops/10_dict_v2.cas",
+        "2_ops/test_perf.cas",
         "4_intensive/1_benchmark.cas",
         "4_intensive/2_line_count.cas"
+    ]
+    
+    # Files that return a dict of { "check_name": true }
+    checkpoint_tests = [
+        "1_flow/4_copy.cas",
+        "2_ops/7_expr.cas",
+        "2_ops/8_str_v2.cas",
+        "2_ops/9_list.cas",
+        "2_ops/10_dict_v2.cas"
     ]
     
     print("\n=== RUNNING NORMAL TESTS ===")
@@ -35,7 +48,25 @@ try:
             # Since res is now a Dict (JSON object), we can access it
             # X::Value wrapper for Dict
             if res.get("success"):
-                print(f"[{rel_path}] PASSED (Data: {res.get('data')})")
+                data = res.get('data')
+                print(f"[{rel_path}] PASSED (Data: {data})")
+                
+                # Checkpoints verification
+                if rel_path in checkpoint_tests:
+                    print("--> Verifying Checkpoints...")
+                    if isinstance(data, dict):
+                        failed_checks = []
+                        for k, v in data.items():
+                            if v is not True:
+                                failed_checks.append(f"{k}={v}")
+                        
+                        if failed_checks:
+                            print(f"[CHECKPOINT FAILURE] The following checks failed: {', '.join(failed_checks)}")
+                        else:
+                            print("[CHECKPOINT SUCCESS] All checks passed.")
+                    else:
+                        print(f"[CHECKPOINT FAILURE] Returned data is not a dict: {type(data)}")
+
                 logs = res.get("logs")
                 if logs:
                     print(f"Captured Logs: {logs}")

@@ -1,0 +1,88 @@
+#flow.set{"name":"results","value":{}}
+#flow.set{"name":"test_name","value":"CasLang Spec v2 Comprehensive Suite"}
+
+#flow.set{"name":"expr_a","value":5}
+#flow.set{"name":"expr_b","value":3}
+#flow.set{"name":"expr_add_res","value":"=${expr_a} + ${expr_b}"}
+#flow.set{"name":"expr_mul_res","value":"=${expr_a} * ${expr_b}"}
+
+#flow.if{"cond":"${expr_add_res} == 8"}
+    #dict.set{"dict":"${results}","key":"'expr_add'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'expr_add'","value":false}
+#flow.endif{}
+
+#flow.if{"cond":"${expr_mul_res} == 15"}
+    #dict.set{"dict":"${results}","key":"'expr_mul'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'expr_mul'","value":false}
+#flow.endif{}
+
+#flow.set{"name":"str_s","value":"Hello World World"}
+#str.count{"s":"${str_s}","sub":"World","as":"str_cnt"}
+
+#flow.if{"cond":"${str_cnt} == 2"}
+    #dict.set{"dict":"${results}","key":"'str_count'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'str_count'","value":false}
+#flow.endif{}
+
+#flow.set{"name":"list_my_list","value":[]}
+#list.append{"list":"${list_my_list}","value":10}
+#list.append{"list":"${list_my_list}","value":20}
+#list.len{"list":"${list_my_list}","as":"list_l_len"}
+
+#flow.if{"cond":"${list_l_len} == 2"}
+    #dict.set{"dict":"${results}","key":"'list_len'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'list_len'","value":false}
+#flow.endif{}
+
+#list.range{"from":0,"to":5,"step":1,"as":"list_rng"}
+#list.len{"list":"${list_rng}","as":"list_rng_len"}
+#flow.if{"cond":"${list_rng_len} == 5"}
+    #dict.set{"dict":"${results}","key":"'list_range'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'list_range'","value":false}
+#flow.endif{}
+
+#flow.set{"name":"dict_d","value":{}}
+#dict.set{"dict":"${dict_d}","key":"'k1'","value":"v1"}
+#dict.has{"dict":"${dict_d}","key":"'k1'","as":"dict_has_k1"}
+#dict.remove{"dict":"${dict_d}","key":"'k1'"}
+#dict.has{"dict":"${dict_d}","key":"'k1'","as":"dict_has_k1_after"}
+
+#flow.if{"cond":"'${dict_has_k1}' == 'True'"}
+    #dict.set{"dict":"${results}","key":"'dict_has'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'dict_has'","value":false}
+#flow.endif{}
+
+#flow.if{"cond":"${dict_has_k1_after} == false"}
+    #dict.set{"dict":"${results}","key":"'dict_remove'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'dict_remove'","value":false}
+#flow.endif{}
+
+#flow.set{"name":"copy_original","value":[]}
+#list.append{"list":"${copy_original}","value":"A"}
+
+#flow.set{"name":"copy_clone","value":"${copy_original}"}
+#list.append{"list":"${copy_clone}","value":"B"}
+
+#list.len{"list":"${copy_original}","as":"copy_len_orig"}
+#list.len{"list":"${copy_clone}","as":"copy_len_clone"}
+
+#flow.if{"cond":"${copy_len_orig} == 1"}
+    #dict.set{"dict":"${results}","key":"'deep_copy_orig'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'deep_copy_orig'","value":false}
+#flow.endif{}
+
+#flow.if{"cond":"${copy_len_clone} == 2"}
+    #dict.set{"dict":"${results}","key":"'deep_copy_clone'","value":true}
+#flow.else{}
+    #dict.set{"dict":"${results}","key":"'deep_copy_clone'","value":false}
+#flow.endif{}
+
+#flow.return{"value":"${results}"}

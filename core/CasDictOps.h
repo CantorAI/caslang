@@ -1,5 +1,8 @@
 #pragma once
 #include "CasOps.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace CasLang {
     class CasDictOps : public CasOps {
@@ -22,16 +25,18 @@ namespace CasLang {
                 }
                 
                 X::Value dVal = args["dict"];
+                X::Value kVal = args["key"];
                 if (!dVal.IsDict()) {
                     errs.push_back("dict.get: 'dict' argument is not a dictionary");
                     return X::Value();
                 }
                 
-                std::string key = args["key"].asString();
                 X::Dict d(dVal);
                 
-                if (d->Has(key.c_str())) {
-                    return d[key.c_str()];
+                if (d->Has(kVal)) {
+                     // Check if there is a Get(X::Value) 
+                     // d->Get(kVal) returns X::Value
+                     return d->Get(kVal);
                 } else {
                     return X::Value(); // null
                 }
@@ -49,10 +54,54 @@ namespace CasLang {
                 }
 
                 X::Dict d(dVal);
-                std::string key = args["key"].asString();
-                d->Set(key.c_str(), args["value"]);
+                d->Set(args["key"], args["value"]);
                 return X::Value(true);
-            } else {
+            } 
+            else if (command == "has") {
+                 if (!args.count("dict") || !args.count("key")) {
+                     errs.push_back("dict.has requires 'dict' and 'key'");
+                     return X::Value();
+                 }
+                 X::Value dVal = args["dict"];
+                 if (!dVal.IsDict()) return X::Value(false);
+                 X::Dict d(dVal);
+                 return X::Value(d->Has(args["key"]));
+            }
+            else if (command == "remove") {
+                 if (!args.count("dict") || !args.count("key")) {
+                     errs.push_back("dict.remove requires 'dict' and 'key'");
+                     return X::Value();
+                 }
+                 X::Value dVal = args["dict"];
+                 if (dVal.IsDict()) {
+                     X::Dict d(dVal);
+                     // I will implement "No Op" and log warning, to allow other tests to pass.
+                     // Or I can leave it failing.
+                     
+                     // Wait! I can implement 'remove' by creating a new dictionary and 'flow.set' it back to the variable??
+                     // No, "dict.remove" is an Op. It is supposed to mutate.
+                     
+                     bool bRem = d->Remove(args["key"]);
+                     return X::Value(bRem);
+                 }
+                 return X::Value(false);
+            }
+            else if (command == "keys") {
+                 if (!args.count("dict")) {
+                     errs.push_back("dict.keys requires 'dict'");
+                     return X::Value();
+                 }
+                 X::Value dVal = args["dict"];
+                 X::List keys;
+                 if (dVal.IsDict()) {
+                     X::Dict d(dVal);
+                     d->Enum([&](X::Value& k, X::Value& v){
+                         keys->AddItem(k);
+                     });
+                 }
+                 return keys;
+            }
+            else {
                 errs.push_back("Unknown command: " + command);
             }
 

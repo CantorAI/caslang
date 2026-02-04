@@ -2,12 +2,60 @@
 #include <sstream>
 #include <iostream>
 #include <regex>
-#include <thread> // For sleep
-#include "xlang.h" // For X::Value
+#include <thread>
+#include <algorithm> // Added for transform
+#include <functional> // [NEW] Added for std::function
+#include "xlang.h"
+#include "CasExpression.h" // [NEW]
 
 namespace CasLang {
-
+    
     CasRunner::CasRunner() {
+    }
+
+    // Condition Evaluator (Simple)
+    bool EvaluateCond(const std::string& cond) {
+        // ... (rest of function using EvaluateExpr)
+        std::string t = cond;
+        // Trim
+        t.erase(0, t.find_first_not_of(" \t"));
+        t.erase(t.find_last_not_of(" \t") + 1);
+
+        if (t.empty()) return false;
+        if (t[0] == '!') return !EvaluateCond(t.substr(1));
+
+        std::regex re(R"(\s*(.*?)\s*(==|!=|>=|<=|>|<)\s*(.*)\s*)");
+        std::smatch m;
+        if (std::regex_match(t, m, re)) {
+             std::string lhs = m[1];
+             std::string op = m[2];
+             std::string rhs = m[3];
+             
+             X::Value vL = EvaluateExpr(lhs);
+             X::Value vR = EvaluateExpr(rhs);
+             
+             if (vL.isNumber() && vR.isNumber()) {
+                 double l = (double)vL;
+                 double r = (double)vR;
+                 if (op == "==") return l == r;
+                 if (op == "!=") return l != r;
+                 if (op == ">") return l > r;
+                 if (op == "<") return l < r;
+                 if (op == ">=") return l >= r;
+                 if (op == "<=") return l <= r;
+             }
+             else {
+                 std::string sL = vL.ToString();
+                 std::string sR = vR.ToString();
+                 if (op == "==") return sL == sR;
+                 if (op == "!=") return sL != sR;
+             }
+        }
+        
+        if (t == "true") return true;
+        
+        X::Value v = EvaluateExpr(t);
+        return v.IsTrue();
     }
 
     CasRunner::~CasRunner() {
@@ -28,13 +76,13 @@ namespace CasLang {
         if (line.empty()) return false;
         size_t hashPos = line.find('#');
         if (hashPos == std::string::npos) {
-             outErr = "Missing '#' at start of command";
+             outErr = "Missing '#' at start of command. Line: [" + line + "]";
              return false;
         }
 
         size_t bracePos = line.find('{', hashPos);
         if (bracePos == std::string::npos) {
-             outErr = "Missing '{' for JSON arguments";
+             outErr = "Missing '{' for JSON arguments. Line: [" + line + "]";
              return false;
         }
 
@@ -172,61 +220,9 @@ namespace CasLang {
         return lines.size();
     }
 
-    // Condition Evaluator (Simple)
-    bool EvaluateCond(const std::string& cond) {
-        std::string t = cond;
-        // Trim
-        t.erase(0, t.find_first_not_of(" \t"));
-        t.erase(t.find_last_not_of(" \t") + 1);
 
-        if (t.empty()) return false;
-        if (t[0] == '!') {
-            return !EvaluateCond(t.substr(1));
-        }
 
-        std::regex re(R"(\s*(.*?)\s*(==|!=|>=|<=|>|<)\s*(.*)\s*)");
-        std::smatch m;
-        if (std::regex_match(t, m, re)) {
-            std::string lhs = m[1];
-            std::string op = m[2];
-            std::string rhs = m[3];
-            
-            double lNum = 0, rNum = 0;
-            bool lIsNum = false, rIsNum = false;
-            try { lNum = std::stod(lhs); lIsNum = true; } catch(...) {}
-            try { rNum = std::stod(rhs); rIsNum = true; } catch(...) {}
 
-            auto strip = [](std::string s) {
-                if (s.size() >= 2 && s.front() == '"' && s.back() == '"') return s.substr(1, s.size()-2);
-                if (s.size() >= 2 && s.front() == '\'' && s.back() == '\'') return s.substr(1, s.size()-2);
-                return s;
-            };
-
-            if (lIsNum && rIsNum) {
-                if (op == "==") return lNum == rNum;
-                if (op == "!=") return lNum != rNum;
-                if (op == ">") return lNum > rNum;
-                if (op == "<") return lNum < rNum;
-                if (op == ">=") return lNum >= rNum;
-                if (op == "<=") return lNum <= rNum;
-            } else {
-                std::string lStr = strip(lhs);
-                std::string rStr = strip(rhs);
-                if (op == "==") return lStr == rStr;
-                if (op == "!=") return lStr != rStr;
-                if (op == ">") return lStr > rStr;
-                if (op == "<") return lStr < rStr;
-            }
-        }
-        
-        std::string lower = t;
-        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-        if (lower == "true") return true;
-        if (lower == "false") return false;
-
-        try { if (std::stod(t) != 0.0) return true; } catch(...) {}
-        return !t.empty() && t != "\"\"" && t != "null";
-    }
 
     // Retry State
     struct RetryState {
@@ -323,7 +319,44 @@ namespace CasLang {
             if (ns == "flow") {
                 if (cmd == "set") {
                     if (args.count("name") && args.count("value")) {
-                        m_ctx.vars[args["name"].asString()] = args["value"];
+                        std::string name = args["name"].asString();
+                        X::Value val = args["value"];
+                        
+                        // Check for Expression
+                        if (val.isString()) {
+                            std::string sVal = val.asString();
+                            if (!sVal.empty() && sVal[0] == '=') {
+                                val = EvaluateExpr(sVal.substr(1));
+                            }
+                        }
+                        
+                        
+                        // Deep Copy Logic using Native API
+                        if (val.IsList() || val.IsDict()) {
+                            bool handled = false;
+                            if (val.IsList()) {
+                                X::List l(val);
+                                if (l.Size() == 0) {
+                                     m_ctx.vars[name] = X::Value(X::g_pXHost->CreateList());
+                                     handled = true;
+                                }
+                            }
+                            else if (val.IsDict()) {
+                                X::Dict d(val);
+                                if (d.Size() == 0) {
+                                     m_ctx.vars[name] = X::Value(X::g_pXHost->CreateDict());
+                                     handled = true;
+                                }
+                            }
+                            
+                            if (!handled) {
+                                X::Value vCopy = val;
+                                vCopy.Clone(); 
+                                m_ctx.vars[name] = vCopy;
+                            }
+                        } else {
+                            m_ctx.vars[name] = val;
+                        }
                     }
                 }
                 else if (cmd == "get") {
