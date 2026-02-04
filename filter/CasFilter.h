@@ -8,6 +8,9 @@
 #include "help_func.h"
 #include "Stats.h"
 #include "CasRunner.h"
+#include <mutex>
+#include <future>
+#include <unordered_map>
 
 namespace CasLang
 {
@@ -17,11 +20,17 @@ namespace CasLang
 	{
 		double m_fps = 0;
 		Stats m_stats;
-		CasLang::CasRunner m_actionRunner;
+		CasLang::CasRunner m_CasRunner;
+        
+        // Async feedback handling
+        std::mutex m_mutex;
+        std::unordered_map<unsigned long long, std::promise<X::Value>*> m_pendingRequests;
+
 	public:	
 		BEGIN_PACKAGE(CasFilter)
 			ADD_BASE(BaseFilter)
-
+			APISET().AddFunc<0>("GetCaps", &CasFilter::GetCaps);
+			APISET().AddFunc<0>("GetCombinedPrompts", &CasFilter::GetCombinedPrompts);
 		END_PACKAGE
 	public:
 
@@ -36,6 +45,10 @@ namespace CasLang
 			RegMetrics();
 		}
 		virtual bool onPinPutFrame(IPin* pin, X::Value& frame) override;
+        virtual void OnFeedback(X::Value stateValue, X::Value feedbackValue) override;
+        
+		X::Value GetCaps();
+		X::Value GetCombinedPrompts();
 		void Deliver(X::Value& frame)
 		{
 			m_stats.OneTime();
@@ -74,5 +87,14 @@ namespace CasLang
 		{
 			return true;
 		}
+        
+    private:
+        bool ParseInputFrame(X::Value& frame, unsigned long long& feedbackId, X::Value& payload);
+        bool ExtractToolCall(X::Value& payload, std::string& toolName, std::string& callId, X::Dict& args);
+        void ProcessRunCall(const std::string& script, const std::string& callId, unsigned long long feedbackId);
+        void ProcessGetCapsCall(const std::string& callId, unsigned long long feedbackId);
+
+        X::Value ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId);
+        void SendToolCall(unsigned long long reqId, const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args);
 	};
 }

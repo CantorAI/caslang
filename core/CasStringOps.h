@@ -107,6 +107,76 @@ namespace CasLang {
                 return X::Value(count);
             }
 
+            if (command == "match") {
+                std::string regexStr = S("regex");
+                std::string caseMode = S("case");
+                if (regexStr.empty()) {
+                    errs.push_back("str.match: 'regex' required");
+                    return X::Value();
+                }
+                
+                std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+                if (caseMode == "insensitive") flags |= std::regex_constants::icase;
+                
+                try {
+                    std::regex re(regexStr, flags);
+                    std::smatch m;
+                    if (std::regex_search(s, m, re)) {
+                        X::Dict res;
+                        res->Set("ok", true);
+                        res->Set("match", m.str());
+                        res->Set("pos", (long long)m.position());
+                        
+                        X::List groups;
+                        for (size_t i = 1; i < m.size(); ++i) {
+                            groups += m[i].str();
+                        }
+                        res->Set("groups", groups);
+                        
+                        // Return as JSON string to match spec "stringified JSON object"
+                         // Actually spec says "stringified JSON object" BUT usually X::Value returned is kept as Object if "as" var handles it. 
+                         // However, for consistency with Spec 7C.9, it says "stringified JSON object".
+                         // BUT looking at other ops, they return X::Value directly.
+                         // Let's return X::Dict, and let the caller handle it.
+                         // WAIT, Spec says "boolean false if no match OR a stringified JSON object".
+                         // To avoid mixed types issue in some systems, returning X::Value (Dict) is best for internal execution.
+                         // But if spec requires stringified, we should ToString(). 
+                         // Let's stick to returning X::Value (Dict/Bool) which is more useful within CasLang Runtime. 
+                         // The "Stringified JSON" in spec usually means the 'as' variable will hold an object that was parsed from string or just the object itself.
+                         // Given CasRunner structure, we return X::Value.
+                         return res; 
+                    } else {
+                        return X::Value(false);
+                    }
+                } catch (const std::exception& e) {
+                    errs.push_back(std::string("str.match regex error: ") + e.what());
+                    return X::Value();
+                }
+            }
+
+            if (command == "count_match") {
+                std::string regexStr = S("regex");
+                std::string caseMode = S("case");
+                if (regexStr.empty()) {
+                    errs.push_back("str.count_match: 'regex' required");
+                    return X::Value();
+                }
+
+                std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
+                if (caseMode == "insensitive") flags |= std::regex_constants::icase;
+
+                try {
+                    std::regex re(regexStr, flags);
+                    auto begin = std::sregex_iterator(s.begin(), s.end(), re);
+                    auto end = std::sregex_iterator();
+                    long long count = std::distance(begin, end);
+                    return X::Value(count);
+                } catch (const std::exception& e) {
+                    errs.push_back(std::string("str.count_match regex error: ") + e.what());
+                    return X::Value();
+                }
+            }
+
             errs.push_back("str: unknown command " + command);
             return X::Value();
         }

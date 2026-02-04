@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include <unordered_map>
+#include <functional>
 #include "CasOps.h"
 
 namespace CasLang {
@@ -23,6 +24,9 @@ namespace CasLang {
         ~CasRunner();
 
         void Register(std::unique_ptr<CasOps> op);
+        
+        using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+        void SetExternalHandler(ExternalHandler handler) { m_externalHandler = handler; }
 
         struct Result {
             bool success;
@@ -36,6 +40,7 @@ namespace CasLang {
         const CasContext& GetContext() const { return m_ctx; }
 
     private:
+        ExternalHandler m_externalHandler;
         Result ValidateScript(const std::vector<std::string>& lines);
     };
 }

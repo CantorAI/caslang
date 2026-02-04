@@ -342,18 +342,24 @@ namespace CasLang {
                 }
                 else if (cmd == "loop_start") {
                      std::string varName = args["var"].asString();
-                     std::string listJson = args["in"].asString();
+                     // Check if 'in' is already a list (from variable substitution)
                      X::Value listVal;
-                     // Parse list
-                     if (listJson.size()>=2 && listJson.front()=='[' && listJson.back()==']') {
-                         X::Runtime rt;
-                         X::Package json(rt, "json", "");
-                         listVal = json["loads"](listJson);
-                     } else {
-                         // Maybe variable reference that wasn't substituted? Or simple string?
-                         // For now, assume it MUST be a JSON list
-                         errMsg = "loop_start: 'in' must be a JSON list found:" + listJson;
-                         isErr = true;
+                     if (args["in"].IsList()) {
+                         listVal = args["in"];
+                     }
+                     else {
+                         std::string listJson = args["in"].asString();
+                         // Parse list
+                         if (listJson.size()>=2 && listJson.front()=='[' && listJson.back()==']') {
+                             X::Runtime rt;
+                             X::Package json(rt, "json", "");
+                             listVal = json["loads"](listJson);
+                         } else {
+                             // Maybe variable reference that wasn't substituted? Or simple string?
+                             // For now, assume it MUST be a JSON list
+                             errMsg = "loop_start: 'in' must be a JSON list found:" + listJson;
+                             isErr = true;
+                         }
                      }
 
                      if (!isErr && listVal.IsList()) {
@@ -441,7 +447,25 @@ namespace CasLang {
                          m_ctx.return_flag = true;
                          return { true, "", -1, m_ctx._last };
                     }
-                } else {
+                } 
+                else if (m_externalHandler)
+                {
+                    try {
+                        m_ctx._last = m_externalHandler(ns, cmd, args);
+                        if (args.count("as")) {
+                            m_ctx.vars[args["as"].asString()] = m_ctx._last;
+                        }
+                    } 
+                    catch (const std::exception& e) {
+                        isErr = true;
+                        errMsg = std::string("External Handler Error: ") + e.what();
+                    }
+                    catch (...) {
+                        isErr = true;
+                        errMsg = "External Handler Unknown Error";
+                    }
+                }
+                else {
                     isErr = true;
                     errMsg = "Unknown namespace: " + ns;
                 }
