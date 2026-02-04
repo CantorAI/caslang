@@ -10,11 +10,6 @@
 
 namespace CasLang {
     CasLangModule::CasLangModule() {
-        m_runner.Register(std::make_unique<CasStringOps>());
-        m_runner.Register(std::make_unique<CasFSOps>());
-        m_runner.Register(std::make_unique<CasNumOps>());
-        m_runner.Register(std::make_unique<CasTimeOps>());
-        m_runner.Register(std::make_unique<CasDictOps>());
     }
 
     X::Value CasLangModule::Run(X::Value valFileName) {
@@ -39,14 +34,22 @@ namespace CasLang {
     X::Value CasLangModule::Runs(X::Value valCode) {
         std::string code = valCode.asString();
         std::cout << "[CasLang] Executing code:\n" << code << std::endl;
-        auto result = m_runner.Run(code);
+        
+        CasRunner runner;
+        runner.Register(std::make_unique<CasStringOps>());
+        runner.Register(std::make_unique<CasFSOps>());
+        runner.Register(std::make_unique<CasNumOps>());
+        runner.Register(std::make_unique<CasTimeOps>());
+        runner.Register(std::make_unique<CasDictOps>());
+
+        auto result = runner.Run(code);
         
         X::Dict out;
         out->Set("success", result.success);
 
         // Populate logs
         X::List logList;
-        for (const auto& l : m_runner.GetContext().logs) {
+        for (const auto& l : runner.GetContext().logs) {
             X::Value v(l);
             logList->AddItem(v);
         }

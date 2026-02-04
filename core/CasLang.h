@@ -7,7 +7,7 @@
 
 namespace CasLang {
     class CasLangModule: public Singleton<CasLangModule> {
-        CasRunner m_runner;
+
     public:
         BEGIN_PACKAGE(CasLangModule)
             APISET().AddFunc<1>("run", &CasLangModule::Run);
