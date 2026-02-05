@@ -1,0 +1,121 @@
+id: A2F94F5F809149F1A14307E0094CA46D
+file_type: CantorAI Pipeline
+code_behide: ""
+parameters: ""
+nodes:
+  - name: action-1
+    type: action
+    parameters: ~
+    description: Action Filter
+    isService: 0
+    uri: galaxy_llmAgent
+    imageUri: Images/action.svg
+    inputPins:
+      - name: input
+    outputPins: ~
+    x: 695
+    y: 92
+    width: 150
+    height: 80
+    iconCenter:
+      x: 673.044921875
+      y: 104.5
+  - name: prompt-1
+    type: prompt
+    description: The prompt module is designed to craft and manage prompts for Large Language Models, allowing for the customization and optimization of input queries to elicit desired responses from LLMs.
+    isService: 0
+    uri: galaxy_llmAgent
+    imageUri: Images/prompt.svg
+    inputPins:
+      - name: input1
+    outputPins:
+      - name: output
+    x: -94
+    y: -35
+    width: 150
+    height: 80
+    iconCenter:
+      x: -118.2861328125
+      y: -22.5
+  - name: agent-1
+    type: agent
+    parameters:
+      api_type: chat
+      headers: ~
+      model: gpt-oss:20b
+      output_mode: full
+      temperature: 0.69999999999999996
+      url: http://localhost:11434/v1/chat/completions
+      url1: http://localhost:11434/v1/responses
+    description: The llmAgent module integrates Large Language Models into the pipeline, enabling natural language understanding and generation capabilities. It can be used for tasks like question answering, summarization, or conversational AI.
+    isService: 0
+    uri: galaxy_llmAgent
+    imageUri: Images/ai_agent.svg
+    inputPins:
+      - name: input
+    outputPins:
+      - name: output
+      - name: output2
+    x: 183
+    y: -34
+    width: 200
+    height: 140
+    iconCenter:
+      x: 162.98291015625
+      y: -21.5
+  - name: endpoints-1
+    type: endpoints
+    parameters: ~
+    description: The EndPoints module provides interfaces for web pages or applications to query and retrieve frames or data from the pipeline, enabling external systems to interact with and utilize the processed information.
+    isService: 0
+    uri: galaxy_forge
+    imageUri: Images/endpoints.svg
+    inputPins:
+      - name: input
+    outputPins: ~
+    x: 716
+    y: -132
+    width: 150
+    height: 80
+    iconCenter:
+      x: 683.1416015625
+      y: -119.5
+  - name: CasLangFilter-1
+    type: CasLangFilter
+    parameters: ~
+    description: Executes CasLang scripts
+    isService: 0
+    uri: caslang
+    imageUri: Images/caslang.svg
+    inputPins:
+      - name: input
+    outputPins:
+      - name: output
+    x: 445
+    y: 75.5
+    width: 150
+    height: 80
+    iconCenter:
+      x: 398.92431640625
+      y: 88
+connections:
+  - sourceFilter: prompt-1
+    sourcePin: output
+    destinationFilter: agent-1
+    destinationPin: input
+    strongConnection: 1
+  - sourceFilter: agent-1
+    sourcePin: output
+    destinationFilter: endpoints-1
+    destinationPin: input
+    strongConnection: 1
+  - sourceFilter: agent-1
+    sourcePin: output2
+    destinationFilter: CasLangFilter-1
+    destinationPin: input
+    strongConnection: 1
+  - sourceFilter: CasLangFilter-1
+    sourcePin: output
+    destinationFilter: action-1
+    destinationPin: input
+    strongConnection: 1
