@@ -12,10 +12,22 @@ Primary objective: **minimize hallucinations**.
 
 ## **A) OUTPUT RULES (MANDATORY)**
 
-* Output **ONLY** CASLang commands
+* **CRITICAL: DO NOT output CasLang code in the "content" message field.**
+* You **MUST** use the `caslang.run` tool for all scripts.
+* Output **ONLY** CASLang commands (inside the tool argument).
 * **Exactly ONE command per line**
-* NO explanations / comments / markdown
-* Any extra text makes the output INVALID
+* NO explanations / comments / markdown in string arguments.
+
+### **A.1) TOOL USAGE EXAMPLES**
+
+**WRONG (DO NOT DO THIS):**
+> **Tool Call**: None
+> **Content**: "#flow.set{\"name\":\"x\",\"value\":1}"
+
+**RIGHT (DO THIS):**
+> **Tool Call**: `caslang.run`
+> **Arguments**: { "script": "#flow.set{\"name\":\"x\",\"value\":1}" }
+> **Content**: "I will execute the script."
 
 ---
 
