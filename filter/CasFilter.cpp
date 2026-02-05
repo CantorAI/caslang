@@ -8,6 +8,8 @@
 #include "CasFSOps.h"
 #include "CasNumOps.h"
 #include "CasTimeOps.h"
+#include "CasListOps.h"
+#include "CasDictOps.h"
 #include "AgentPrompts.h"
 
 // Helper function: UTF-8 to UTF-16
@@ -61,6 +63,10 @@ namespace CasLang
             if (toolName == "caslang.run")
             {
                 std::string script = args["script"].ToString();
+                std::cout << "--------------------------------------------------" << std::endl;
+                std::cout << "CasLang Script execution:" << std::endl;
+                std::cout << script << std::endl;
+                std::cout << "--------------------------------------------------" << std::endl;
                 if (!script.empty())
                 {
                     ProcessRunCall(script, callId, feedbackId);
@@ -221,11 +227,11 @@ namespace CasLang
 
     X::Value CasFilter::ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId)
     {
-        X::Value stateDict; 
-        X::Dict d(stateDict); 
+        X::Dict d; 
         unsigned long long internalId = (unsigned long long)this + getCurMilliTimeStamp() + (unsigned long long)&d;
         d->Set("internal_id", internalId);
-        
+        X::Value stateDict=d;
+
         unsigned long long reqId = RegisterFeedback(stateDict);
         
         std::promise<X::Value> prom;
@@ -375,8 +381,9 @@ namespace CasLang
         m_filterTypeName = "CasLangFilter";
         m_CasRunner.Register(std::make_unique<CasLang::CasStringOps>());
 		m_CasRunner.Register(std::make_unique<CasLang::CasFSOps>());
-        m_CasRunner.Register(std::make_unique<CasLang::CasNumOps>());
         m_CasRunner.Register(std::make_unique<CasLang::CasTimeOps>());
+        m_CasRunner.Register(std::make_unique<CasLang::CasDictOps>());
+        m_CasRunner.Register(std::make_unique<CasLang::CasListOps>());
     }
     void CasFilter::Run()
     {

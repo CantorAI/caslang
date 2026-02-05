@@ -40,10 +40,10 @@ namespace CasLang {
         CasRunner runner;
         runner.Register(std::make_unique<CasStringOps>());
         runner.Register(std::make_unique<CasFSOps>());
-        runner.Register(std::make_unique<CasNumOps>());
+        //runner.Register(std::make_unique<CasNumOps>());
         runner.Register(std::make_unique<CasTimeOps>());
-        runner.Register(std::make_unique<CasDictOps>()); // RESTORED
-        runner.Register(std::make_unique<CasListOps>()); // RESTORED
+        runner.Register(std::make_unique<CasDictOps>());
+        runner.Register(std::make_unique<CasListOps>());
 
         CasRunner::Result res = runner.Run(code);
         

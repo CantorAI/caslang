@@ -62,6 +62,12 @@ Primary objective: **minimize hallucinations**.
 
 * `${a.b}` is ALWAYS INVALID
 
+### **Common Mistakes (DO NOT DO)**
+
+* `WRONG: ${item.id}         RIGHT: ${item['id']}`
+* `WRONG: ${stat.size}       RIGHT: ${stat['size']}`
+* `WRONG: ${stat.is_dir}     RIGHT: ${stat['is_dir']}`
+
 ### **Dict access (ONLY)**
 
 * Literal key: `${d['key']}`
@@ -333,7 +339,7 @@ Returns: `true`
 
 
 ```
-#str.contains{"s":"${hay}","needle":"${nd}","as":"has"}
+#str.contains{"s":"${hay}","sub":"${nd}","as":"has"}
 ```
 
 `${has}` is bool
@@ -342,7 +348,7 @@ Returns: `true`
 
 
 ```
-#str.find{"s":"${hay}","needle":"${nd}","as":"pos"}
+#str.find{"s":"${hay}","sub":"${nd}","as":"pos"}
 ```
 
 `${pos}` is number index or -1
@@ -351,7 +357,7 @@ Returns: `true`
 
 
 ```
-#str.replace{"s":"${x}","from":"foo","to":"bar","as":"y"}
+#str.replace{"s":"${x}","old":"foo","new":"bar","as":"y"}
 ```
 
 Replaces ALL occurrences
@@ -411,7 +417,19 @@ Return in `${m}`:
 #fs.list{"dir":"${d}","pattern":"*","recursive":false,"include_dirs":false,"as":"names"}
 ```
 
-`${names}` becomes a list of strings (paths)
+`${names}` becomes a list of strings (paths).
+
+**Result is STRINGS, NOT OBJECTS.**
+* To get file info, you MUST loop and call `#fs.stat`.
+
+**CORRECT PATTERN:**
+```
+#fs.list{"dir":"...","as":"files"}
+#flow.loop_start{"var":"p","in":"${files}"}
+  #fs.stat{"path":"${p}","as":"s"}
+  #flow.if{"cond":"'${s['is_dir']}' == 'True'"}
+    ...
+```
 
 ### **M2. Read**
 
@@ -525,6 +543,22 @@ Returns `true`
 
 ---
 
+# **S) SANDBOX OPS (CAPABILITY, FALLBACK)**
+
+**GUIDELINE: PREFER NATIVE COMMANDS**
+* Use `#fs.*`, `#str.*`, `#flow.*` whenever possible.
+* Use `#sandbox` **ONLY** if native commands are insufficient (e.g. need numpy, complex logic).
+
+```
+#sandbox.exec{"lang":"python","code":"...","args":{},"as":"r"}
+```
+
+* `code`: Python/Bash script. Use escaped newlines `\n`.
+* `args`: Dict of vars to inject (if supported).
+* `as`: Output string.
+
+---
+
 # **P) ERROR MODEL (UNIFIED)**
 
 
@@ -628,6 +662,8 @@ Errors have:
 * `E3403 E_SANDBOX_NO_OUTPUT`
 * `E3404 E_SANDBOX_OUTPUT_TOO_LARGE`
 * `E3405 E_SANDBOX_OUTPUT_INVALID`
+
+
 
 **Retry**
 

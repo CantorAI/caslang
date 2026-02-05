@@ -7,6 +7,8 @@ struct PromptEntry {
     const char* content;
 };
 
+// Force rebuild timestamp update
+
 // Embed the prompt text
 const char* kCasSystemPrompt = 
 #include "Prompts/CAS_Prompt.hpp"

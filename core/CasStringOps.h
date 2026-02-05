@@ -23,6 +23,14 @@ namespace CasLang {
                 return (it != args.end()) ? it->second.asString() : def;
             };
             
+            // Strict Type Check for 's'
+            if (args.count("s")) {
+                X::Value& v = args["s"];
+                if (!v.isString() && command != "print" && command != "log") {
+                    errs.push_back("E2103 E_ARG_TYPE: 's' must be of type string");
+                    return X::Value();
+                }
+            }
             std::string s = S("s");
             
             if (command == "print") {

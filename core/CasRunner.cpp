@@ -109,6 +109,10 @@ namespace CasLang {
         X::Value jsonVal = json["loads"](jsonStr);
 
         if (!jsonVal.IsObject()) {
+            if (jsonStr.find("\\n#") != std::string::npos) {
+                 outErr = "E1002 E_SCRIPT_FORMAT: Malformed script. Found escaped newline '\\n' between commands. Use real line breaks (ASCII 10).";
+                 return false;
+            }
             outErr = "Args must be JSON object: " + jsonStr;
             //LogError(outErr);
             return false;
@@ -282,16 +286,58 @@ namespace CasLang {
                     
                     // Optimization: Check for exact match "${var}" to preserve type
                     if (s.size() > 3 && s.front() == '$' && s[1] == '{' && s.back() == '}') {
-                        std::string varName = s.substr(2, s.size() - 3);
-                        if (varName == "_last") {
-                            if (m_ctx._last.IsValid()) {
-                                kv.second = m_ctx._last;
-                                continue;
+                        std::string content = s.substr(2, s.size() - 3);
+                        std::string varName = content;
+                        std::string keyName;
+                        long long listIdx = -1;
+                        int accessType = 0; // 0=None, 1=Dict, 2=List
+                        
+                        size_t bracketOpen = content.find('[');
+                        size_t bracketClose = content.rfind(']');
+                        if (bracketOpen != std::string::npos && bracketClose != std::string::npos && bracketClose > bracketOpen) {
+                             varName = content.substr(0, bracketOpen);
+                             std::string inner = content.substr(bracketOpen + 1, bracketClose - (bracketOpen + 1));
+                             if (inner.size() >= 2 && inner.front() == '\'' && inner.back() == '\'') {
+                                 keyName = inner.substr(1, inner.size() - 2);
+                                 accessType = 1;
+                             } else {
+                                 try {
+                                     listIdx = std::stoll(inner);
+                                     accessType = 2;
+                                 } catch(...) {}
+                             }
+                        }
+
+                        if (accessType > 0) {
+                            if (!m_ctx.vars.count(varName)) {
+                                return { false, "E2201 E_VAR_UNDEFINED: " + varName, (int)pc + 1, X::Value() };
+                            }
+                            X::Value base = m_ctx.vars[varName];
+                            
+                            if (accessType == 1) { // Dict
+                                if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, X::Value() };
+                                X::Dict d(base);
+                                if (d->Has(keyName.c_str())) { kv.second = d[keyName.c_str()]; continue; }
+                                else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, X::Value() };
+                            }
+                            else if (accessType == 2) { // List
+                                if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, X::Value() };
+                                X::List l(base);
+                                if (listIdx >= 0 && listIdx < l.Size()) { kv.second = l[(int)listIdx]; continue; }
+                                else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, X::Value() };
                             }
                         }
-                        else if (m_ctx.vars.count(varName)) {
-                            kv.second = m_ctx.vars[varName];
-                            continue;
+                        else {
+                            if (varName == "_last") {
+                                if (m_ctx._last.IsValid()) {
+                                    kv.second = m_ctx._last;
+                                    continue;
+                                }
+                            }
+                            else if (m_ctx.vars.count(varName)) {
+                                kv.second = m_ctx.vars[varName];
+                                continue;
+                            }
                         }
                     }
 
@@ -299,10 +345,46 @@ namespace CasLang {
                     while ((pos = s.find("${", pos)) != std::string::npos) {
                         size_t end = s.find('}', pos);
                         if (end != std::string::npos) {
-                            std::string varName = s.substr(pos + 2, end - (pos + 2));
-                            std::string valStr;
-                            if (varName == "_last") valStr = m_ctx._last.IsValid() ? m_ctx._last.asString() : "null";
-                            else if (m_ctx.vars.count(varName)) valStr = m_ctx.vars[varName].asString();
+                            std::string content = s.substr(pos + 2, end - (pos + 2));
+                            std::string varName = content;
+                            std::string keyName;
+                            long long listIdx = -1;
+                            int accessType = 0;
+                             
+                            size_t bracketOpen = content.find('[');
+                            size_t bracketClose = content.rfind(']');
+                            if (bracketOpen != std::string::npos && bracketClose != std::string::npos && bracketClose > bracketOpen) {
+                                  varName = content.substr(0, bracketOpen);
+                                  std::string inner = content.substr(bracketOpen + 1, bracketClose - (bracketOpen + 1));
+                                  if (inner.size() >= 2 && inner.front() == '\'' && inner.back() == '\'') {
+                                      keyName = inner.substr(1, inner.size() - 2);
+                                      accessType = 1;
+                                  } else {
+                                      try {
+                                          listIdx = std::stoll(inner);
+                                          accessType = 2;
+                                      } catch(...) {}
+                                  }
+                            }
+
+                            std::string valStr = "null";
+                            if (accessType > 0) {
+                                 if (m_ctx.vars.count(varName)) {
+                                     X::Value base = m_ctx.vars[varName];
+                                     if (accessType == 1 && base.IsDict()) {
+                                         X::Dict d(base);
+                                         if (d->Has(keyName.c_str())) valStr = d[keyName.c_str()].ToString();
+                                         else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, X::Value() };
+                                     }
+                                     else if (accessType == 2 && base.IsList()) {
+                                         X::List l(base);
+                                         if (listIdx >= 0 && listIdx < l.Size()) valStr = l[(int)listIdx].ToString();
+                                         else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, X::Value() };
+                                     }
+                                 }
+                            }
+                            else if (varName == "_last") valStr = m_ctx._last.IsValid() ? m_ctx._last.ToString() : "null";
+                            else if (m_ctx.vars.count(varName)) valStr = m_ctx.vars[varName].ToString();
                             
                             s.replace(pos, end - pos + 1, valStr);
                         }
@@ -483,18 +565,28 @@ namespace CasLang {
                 // Execute Op
                 std::vector<std::string> errs;
                 if (m_ops.count(ns)) {
-                    m_ctx._last = m_ops[ns]->Execute({ns}, cmd, args, m_ctx, errs);
-                    if (!errs.empty()) {
+                    try {
+                        m_ctx._last = m_ops[ns]->Execute({ns}, cmd, args, m_ctx, errs);
+                        if (!errs.empty()) {
+                            isErr = true;
+                            errMsg = errs[0];
+                        }
+                        if (args.count("as")) {
+                            m_ctx.vars[args["as"].asString()] = m_ctx._last;
+                        }
+                        if (args.count("return") && args["return"].IsTrue()) {
+                             m_ctx.return_value = m_ctx._last;
+                             m_ctx.return_flag = true;
+                             return { true, "", -1, m_ctx._last };
+                        }
+                    }
+                    catch (const std::exception& e) {
                         isErr = true;
-                        errMsg = errs[0];
+                        errMsg = "E3001 E_RUNTIME_EXCEPTION: " + std::string(e.what());
                     }
-                    if (args.count("as")) {
-                        m_ctx.vars[args["as"].asString()] = m_ctx._last;
-                    }
-                    if (args.count("return") && args["return"].IsTrue()) {
-                         m_ctx.return_value = m_ctx._last;
-                         m_ctx.return_flag = true;
-                         return { true, "", -1, m_ctx._last };
+                    catch (...) {
+                        isErr = true;
+                        errMsg = "E3001 E_RUNTIME_EXCEPTION: Unknown Error";
                     }
                 } 
                 else if (m_externalHandler)
