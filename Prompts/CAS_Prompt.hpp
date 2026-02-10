@@ -100,6 +100,7 @@ Forbidden: dot access, function calls, string literals inside expression
 7A) FLOW (#flow.*)
 ------------------------------------
 #flow.set{"name":"x","value":...}
+#flow.get{"name":"x"}
 
 #flow.if{"cond":"..."}
 #flow.else{}
@@ -134,6 +135,7 @@ Use for transient failures. Do NOT implement manual retry loops with sleep.
 7D) DICT OPS (#dict.*)
 ------------------------------------
 #dict.set{"dict":"${d}","key":"'k'","value":"${v}"}     (key is single-quoted literal like 'user_id')
+#dict.get{"dict":"${d}","key":"'k'","as":"v"}
 #dict.remove{"dict":"${d}","key":"'k'"}
 #dict.has{"dict":"${d}","key":"'k'","as":"has"}
 #dict.keys{"dict":"${d}","as":"ks"}
@@ -149,8 +151,8 @@ Use for transient failures. Do NOT implement manual retry loops with sleep.
 #str.find{"s":"${hay}","sub":"${nd}","as":"pos"}
 #str.replace{"s":"${x}","old":"foo","new":"bar","as":"y"}
 #str.slice{"s":"${x}","start":0,"end":10,"as":"sub"}
-#str.match{"s":"${x}","regex":"...","case":"sensitive|insensitive","as":"m"}
-#str.count_regex{"s":"${x}","regex":"...","as":"n"}
+#str.match{"s":"${x}","regex":"...","case":"sensitive|insensitive","as":"m"}   (returns dict: {'ok':bool,'match':str,'pos':num,'groups':list[str]} or false)
+#str.count_match{"s":"${x}","regex":"...","case":"sensitive|insensitive","as":"n"}
 #str.count{"s":"${x}","sub":"...","as":"n"}
 #str.print{"msg":"..."}
 #str.log{"msg":"..."}
@@ -160,9 +162,9 @@ Use for transient failures. Do NOT implement manual retry loops with sleep.
 ------------------------------------
 #fs.list{"dir":"${d}","pattern":"*","recursive":false,"include_dirs":false,"as":"paths"}
 #fs.read_file{"path":"${p}","offset":0,"max_bytes":-1,"as":"data"}
-#fs.write_file{"path":"${p}","data":"${buf}","append":false,"as":"ok"}
+#fs.write_file{"path":"${p}","data":"${buf}","append":false,"as":"bytes_written"}
 #fs.exists{"path":"${p}","as":"ok"}
-#fs.stat{"path":"${p}","as":"st"}    (use ${st['size']}, ${st['is_dir']}, etc.)
+#fs.stat{"path":"${p}","as":"st"}    (returns dict: {'path':str,'exists':bool,'is_dir':bool,'is_file':bool,'size':num})
 #fs.mkdir{"path":"${p}","recursive":true}
 #fs.delete{"path":"${p}","recursive":false}
 #fs.copy{"src":"${a}","dst":"${b}","overwrite":false,"recursive":true}

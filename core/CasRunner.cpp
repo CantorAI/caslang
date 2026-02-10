@@ -565,6 +565,13 @@ namespace CasLang {
                         loopStack.pop_back();
                     }
                 }
+                else if (cmd == "continue") {
+                     if (!loopStack.empty()) {
+                         size_t start = loopStack.back().first;
+                         pc = start; // Jump back to loop_start to re-evaluate/increment
+                         continue;
+                     }
+                }
                 else if (cmd == "retry_start") {
                     int count = 3;
                     int delay = 1000;

@@ -489,7 +489,7 @@ public:
                 A{"as","string",false,"Capture JSON object string.",""},
                 A{"return","bool",false,"Mark as final output.","false"}
             },
-            "string (JSON with path, exists, is_dir, is_file, size).",
+            "string (JSON object string).",
             {
                 "#fs.stat{\"path\":\"${root}/video.mp4\",\"as\":\"meta\"}"
             }
