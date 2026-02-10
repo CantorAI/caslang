@@ -550,12 +550,12 @@ Returns `true`
 * Use `#sandbox` **ONLY** if native commands are insufficient (e.g. need numpy, complex logic).
 
 ```
-#sandbox.exec{"lang":"python","code":"...","args":{},"as":"r"}
-```
+#sandbox.exec{"cmd":"...","as":"r"}
+#sandbox.exec{"cmd":"python -c \"print(1+1)\"","as":"r"}
+#sandbox.exec{"cmd":"echo hello","as":"r"}
 
-* `code`: Python/Bash script. Use escaped newlines `\n`.
-* `args`: Dict of vars to inject (if supported).
-* `as`: Output string.
+* `cmd`: Any shell command (e.g. `python -c ...`, `npm test`, `ls -la`).
+* `as`: Output string (stdout).
 
 ---
 

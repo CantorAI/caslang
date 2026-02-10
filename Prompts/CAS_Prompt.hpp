@@ -196,7 +196,8 @@ CRITICAL:
 7I) SANDBOX (#sandbox.exec) — LAST RESORT ONLY
 ------------------------------------
 Use only if native commands cannot express the task AND you can escape correctly.
-#sandbox.exec{"lang":"python","code":"...","as":"r"}
+#sandbox.exec{"cmd":"python -c \"print(100)\"","as":"r"}
+#sandbox.exec{"cmd":"echo hello","as":"out"}
 
 ========================================================
 8) HOST RETURN / ERROR FORMAT (KEEP THIS; NO ERROR CODE TABLE)
