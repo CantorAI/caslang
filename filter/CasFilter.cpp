@@ -11,6 +11,7 @@
 #include "CasListOps.h"
 #include "CasDictOps.h"
 #include "AgentPrompts.h"
+#include "log.h"
 
 // Helper function: UTF-8 to UTF-16
 std::wstring UTF8ToWString(const std::string& utf8) {
@@ -30,6 +31,19 @@ namespace CasLang
 {
     using namespace Galaxy;
 
+    bool CasFilter::onLoad()
+    {
+        if (m_pFactory)
+        {
+            X::Value cantor = m_pFactory->GetCantor();
+            X::Value log = cantor["log_nolineend"];
+            long logLevel = (long)cantor["GetLogLevel"]();
+            InitLog(log);
+            SetLogLevel(logLevel);
+
+        }
+        return true;
+    }
     void CasFilter::RegMetrics()
     {
         X::Value cantor = m_pFactory->GetCantor();

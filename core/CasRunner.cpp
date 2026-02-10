@@ -404,11 +404,35 @@ namespace CasLang {
                         std::string name = args["name"].asString();
                         X::Value val = args["value"];
                         
+
                         // Check for Expression
                         if (val.isString()) {
                             std::string sVal = val.asString();
                             if (!sVal.empty() && sVal[0] == '=') {
                                 val = EvaluateExpr(sVal.substr(1));
+                            }
+                            // [NEW] Parse JSON string for List/Dict
+                            else if (sVal.size() >= 2 && (sVal.front() == '[' || sVal.front() == '{')) {
+                                // Optimization: Direct creation for empty structures
+                                if (sVal == "[]") {
+                                    val = X::Value(X::g_pXHost->CreateList());
+                                }
+                                else if (sVal == "{}") {
+                                    val = X::Value(X::g_pXHost->CreateDict());
+                                }
+                                else {
+                                    // Try to parse as JSON
+                                    X::Runtime rt;
+                                    X::Package json(rt, "json", "");
+                                    try {
+                                        X::Value parsed = json["loads"](sVal);
+                                        if (parsed.IsList() || parsed.IsDict()) {
+                                            val = parsed;
+                                        }
+                                    } catch (...) {
+                                        // Ignore parse errors, treat as string
+                                    }
+                                }
                             }
                         }
                         

@@ -10,6 +10,7 @@ option(BUILD_GALAXY_FILTER "Build Galaxy Filter" ON)
 # Using relative path to xlang/Api as per sqlite reference
 include_directories("../xlang/Api")
 include_directories(.)
+include_directories(log)
 include_directories(core)
 
 if(BUILD_GALAXY_FILTER)
@@ -21,7 +22,7 @@ if(BUILD_GALAXY_FILTER)
 endif()
 
 FILE(GLOB XLANG_API_SRC "../xlang/Api/value.cpp")
-
+file(GLOB Log_SRC "log/*.cpp")
 # Core sources
 FILE(GLOB CORE_SRC "core/*.cpp")
 
@@ -30,13 +31,14 @@ set(Main_SRC ${CORE_SRC} main.cpp)
 if(BUILD_GALAXY_FILTER)
     FILE(GLOB FILTER_SRC "filter/*.cpp")
     FILE(GLOB Common_SRC "../Galaxy/common/*.cpp" "../Galaxy/log/*.cpp")
-    list(APPEND Main_SRC ${FILTER_SRC} ${Common_SRC})
+    list(APPEND Main_SRC ${FILTER_SRC} ${Common_SRC} )
 endif()
 
 # Create the library
 add_library(${PROJECT_NAME} 
     SHARED
     ${XLANG_API_SRC}
+    ${Log_SRC}
     ${Main_SRC}
 )
 

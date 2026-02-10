@@ -77,17 +77,53 @@ def SetupAndRunLoop():
     if not promptFilter:
         cantor.log(cantor.LOG_RED, "Error: prompt-1 filter not found", cantor.LOG_RESET)
         return
+    tools_desc =""
+    # Inject CasLang Description
+    casFilter = pipelineObj.QueryFilter("CasLangFilter-1")
+    if casFilter:
+        cas_caps = casFilter.GetCombinedPrompts()
+        if cas_caps:
+            tools_desc = cas_caps + "\n" + tools_desc
+            cantor.log(cantor.LOG_GREEN, "Agent Pipeline: CasLang Caps Injected", cantor.LOG_RESET)
 
-    # Test Loop
-    prompts = [
-        "calc sum of files and folders in D:\\CantorAI1, need individual count",
-        "write a python script to print hello"
+    promptFilter.SetParameter("prompts", tools_desc)
+
+    # Defines tests with expected substrings in output
+    tests = [
+        {
+            "prompt": "count files in D:/CantorAI/caslang",
+            "expected": "files" 
+        },
+        {
+            "prompt": "calc sum of files and folders in D:/CantorAI/caslang, need individual count",
+            "expected": "files" 
+        },
+        {
+            "prompt": "reverse the string 'CantorAI'",
+            "expected": "IAratnaC" 
+        },
+        {
+            "prompt": "calculate average of [10, 20, 30, 40, 50] using caslang",
+            "expected": "30"
+        },
+        {
+            "prompt": "Write the text 'HealthCheck' to file 'D:/CantorAI/caslang/test/filter/check.txt' and then read it back",
+            "expected": "HealthCheck"
+        },
+        {
+            "prompt": "calculate 100 * 25",
+            "expected": "2500"
+        }
     ]
     
-    for (prompt,i) in prompts:
-        cantor.log(cantor.LOG_BLUE, f"--- Starting Round {i+1} ---", cantor.LOG_RESET)
+    for (test,i) in tests:
+        prompt = test["prompt"]
+        expected = test["expected"]
+        
+        cantor.log(cantor.LOG_BLUE, f"--- Starting Round {i+1}: {prompt} ---", cantor.LOG_RESET)
         
         _round_finished = False
+        _last_result = None # Reset result
         
         meta_data = {
             "sessionId": "test_session_1",
@@ -107,10 +143,20 @@ def SetupAndRunLoop():
                 break
         
         if _round_finished:
-            cantor.log(cantor.LOG_GREEN, f"Round {i+1} Finished.", cantor.LOG_RESET)
+            cantor.log(cantor.LOG_GREEN, f"Round {i+1} Finished. Result: {_last_result}", cantor.LOG_RESET)
+            
+            # Verification
+            result_str = str(_last_result)
+            if expected in result_str:
+                 cantor.log(cantor.LOG_GREEN, f"CONFIRMED: Result contains '{expected}'", cantor.LOG_RESET)
+            else:
+                 cantor.log(cantor.LOG_RED, f"FAILURE: Result does NOT contain '{expected}'", cantor.LOG_RESET)
+                 # Don't exit, try next
+        else:
+            cantor.log(cantor.LOG_RED, "Round Failed (Timeout)", cantor.LOG_RESET)
         
         time.sleep(1)
 
-    cantor.log(cantor.LOG_GREEN, "Test Finished Successfully", cantor.LOG_RESET)
+    cantor.log(cantor.LOG_GREEN, "Test Suite Finished", cantor.LOG_RESET)
 
 SetupAndRunLoop()

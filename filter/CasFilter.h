@@ -44,6 +44,7 @@ namespace CasLang
 			m_pFactory = pFact;
 			RegMetrics();
 		}
+		bool onLoad() override;
 		virtual bool onPinPutFrame(IPin* pin, X::Value& frame) override;
         virtual void OnFeedback(X::Value stateValue, X::Value feedbackValue) override;
         

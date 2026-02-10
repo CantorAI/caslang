@@ -230,7 +230,8 @@ public:
                     }
                 }
                 else {
-                    for (auto& e : fs::recursive_directory_iterator(dirPath, ec)) {
+                    auto opts = fs::directory_options::skip_permission_denied;
+                    for (auto& e : fs::recursive_directory_iterator(dirPath, opts, ec)) {
                         if (ec) break;
                         auto rel = fs::relative(e.path(), dirPath, ec).u8string(); // Use u8string() for UTF-8 output
                         bool isdir = fs::is_directory(e.path(), ec);
