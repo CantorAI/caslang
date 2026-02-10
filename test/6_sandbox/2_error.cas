@@ -1,0 +1,9 @@
+#sandbox.exec{"cmd":"non_existent_command_xyz","as":"output"}
+#str.print{"msg":"Output: ${output}"}
+#str.contains{"s":"${output}","sub":"recog","as":"found_error1"}
+#str.contains{"s":"${output}","sub":"found","as":"found_error2"}
+#flow.if{"cond":"'${found_error1}' == 'True' or '${found_error2}' == 'True'"}
+#str.print{"msg":"Error Handled OK"}
+#flow.else{}
+#str.print{"msg":"Error Handling Failed"}
+#flow.endif{}

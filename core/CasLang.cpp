@@ -5,6 +5,8 @@
 #include "CasTimeOps.h"
 #include "CasDictOps.h"
 #include "CasListOps.h"
+#include "CasToolOps.h"
+#include "CasSandboxOps.h"
 #include "xlang.h"
 #include <fstream>
 #include <sstream>
@@ -44,6 +46,8 @@ namespace CasLang {
         runner.Register(std::make_unique<CasTimeOps>());
         runner.Register(std::make_unique<CasDictOps>());
         runner.Register(std::make_unique<CasListOps>());
+        runner.Register(std::make_unique<CasToolOps>());
+        runner.Register(std::make_unique<CasSandboxOps>());
 
         CasRunner::Result res = runner.Run(code);
         

@@ -1,0 +1,9 @@
+#sandbox.exec{"cmd":"echo sandbox_test_ok","as":"out"}
+#str.print{"msg":"${out}"}
+#str.contains{"s":"${out}","sub":"sandbox_test_ok","as":"ok"}
+#str.print{"msg":"DEBUG: out='${out}' ok='${ok}'"}
+#flow.if{"cond":"'${ok}' == 'True'"}
+#str.print{"msg":"Sandbox Execute Success"}
+#flow.else{}
+#str.print{"msg":"Sandbox Execute Failed"}
+#flow.endif{}

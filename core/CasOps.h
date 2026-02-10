@@ -6,6 +6,8 @@
 #include "xlang.h"
 
 namespace CasLang {
+    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+
     struct CasContext {
         std::unordered_map<std::string, X::Value> vars;
         X::Value _last;
@@ -21,6 +23,9 @@ namespace CasLang {
         // Execution Logs (for LLM debug)
         std::vector<std::string> logs;
         int current_line = 0;
+
+        // Callback for external tools (e.g. tool.call, sandbox.exec)
+        ExternalHandler externalHandler;
     };
 
     class CasOps {

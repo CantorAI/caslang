@@ -1,0 +1,25 @@
+#flow.set{"name":"test","value":"continue"}
+
+#flow.set{"name":"l","value":"[1,2,3,4,5]"}
+#flow.set{"name":"sum","value":"0"}
+#flow.set{"name":"skipped","value":"0"}
+
+#flow.loop_start{"var":"x","in":"${l}"}
+    #flow.if{"cond":"${x} == 3"}
+        #flow.set{"name":"skipped","value":"=${skipped} + 1"}
+        #str.print{"msg":"Skipping 3"}
+        #flow.continue{}
+    #flow.endif{}
+    
+    #str.print{"msg":"Processing ${x}"}
+    #flow.set{"name":"sum","value":"=${sum} + ${x}"}
+#flow.loop_end{}
+
+#str.print{"msg":"Sum: ${sum}"}
+#str.print{"msg":"Skipped: ${skipped}"}
+
+#flow.if{"cond":"${sum} == 12"}
+    #str.print{"msg":"SUCCESS: Sum is 12 (1+2+4+5)"}
+#flow.else{}
+    #str.print{"msg":"FAILURE: Sum is ${sum} (expected 12)"}
+#flow.endif{}

@@ -1,0 +1,12 @@
+#flow.set{"name":"test","value":"stat"}
+
+#flow.set{"name":"test_file","value":"D:/CantorAI/caslang/test/test_continue.cas"}
+#fs.stat{"path":"${test_file}","as":"st"}
+
+#str.print{"msg":"DEBUG: exists=${st['exists']} is_file=${st['is_file']}"}
+#flow.if{"cond":"'${st['is_file']}' == 'True'"}
+    #str.print{"msg":"SUCCESS: stat is a dict, is_file=True"}
+    #str.print{"msg":"Size: ${st['size']}"}
+#flow.else{}
+    #str.print{"msg":"FAILURE: stat check failed"}
+#flow.endif{}

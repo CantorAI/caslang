@@ -242,6 +242,7 @@ namespace CasLang {
         m_ctx.return_flag = false;
         m_ctx._last = X::Value();
         m_ctx.logs.clear();
+        m_ctx.externalHandler = m_externalHandler; // [NEW] Pass handler to context for Ops
 
         // 1. Split into lines
         std::vector<std::string> lines;

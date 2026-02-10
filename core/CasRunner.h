@@ -25,7 +25,7 @@ namespace CasLang {
 
         void Register(std::unique_ptr<CasOps> op);
         
-        using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+        // using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
         void SetExternalHandler(ExternalHandler handler) { m_externalHandler = handler; }
 
         struct Result {
