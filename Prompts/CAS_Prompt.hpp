@@ -47,6 +47,7 @@ C) JSON args rules:
 - Use double quotes for keys/strings.
 - Values in args must be SCALARS ONLY: string | number | bool | null
 - NEVER inline JSON arrays or objects directly inside args.
+- ESCAPING: To use a newline logic, use "\n" inside the JSON string. Do NOT double-escape to "\\n" unless you mean a literal backslash.
 
 ========================================================
 3) CONTAINER INITIALIZATION (NO dict.new / NO list.new)
@@ -153,7 +154,7 @@ Use for transient failures. Do NOT implement manual retry loops with sleep.
 #str.slice{"s":"${x}","start":0,"end":10,"as":"sub"}
 #str.match{"s":"${x}","regex":"...","case":"sensitive|insensitive","as":"m"}   (returns dict: {'ok':bool,'match':str,'pos':num,'groups':list[str]} or false)
 #str.count_match{"s":"${x}","regex":"...","case":"sensitive|insensitive","as":"n"}
-#str.count{"s":"${x}","sub":"...","as":"n"}
+#str.count{"s":"${x}","sub":"...","as":"n"}  (use "\n" for newline, NOT "\\n")
 #str.print{"msg":"..."}
 #str.log{"msg":"..."}
 
