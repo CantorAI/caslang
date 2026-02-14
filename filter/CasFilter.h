@@ -96,6 +96,6 @@ namespace CasLang
         void ProcessGetCapsCall(const std::string& callId, unsigned long long feedbackId);
 
         X::Value ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId);
-        void SendToolCall(unsigned long long reqId, const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args);
+        void SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args);
 	};
 }

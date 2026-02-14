@@ -241,6 +241,10 @@ namespace CasLang
 
     X::Value CasFilter::ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId)
     {
+        std::string strToolCallName = args["name"].ToString();
+        int timeout_ms = args["timeout_ms"].ToInt();
+        X::Value toolcallArgs = args["args"];
+
         X::Dict d; 
         unsigned long long internalId = (unsigned long long)this + getCurMilliTimeStamp() + (unsigned long long)&d;
         d->Set("internal_id", internalId);
@@ -256,7 +260,7 @@ namespace CasLang
             m_pendingRequests[internalId] = &prom; // Map Internal ID
         }
 
-        SendToolCall(reqId, ns, cmd, args);
+        SendToolCall(reqId, strToolCallName, toolcallArgs);
 
         // Wait with simple timeout safety (e.g. 60 sec) or infinite?
         // Agent tools can take time. Infinite for now.
@@ -266,18 +270,12 @@ namespace CasLang
         return result;
     }
 
-    void CasFilter::SendToolCall(unsigned long long reqId, const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)
+    void CasFilter::SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args)
     {
          X::Dict callObj;
-         std::string fullName = ns + "." + cmd;
-         callObj->Set("name", fullName);
+         callObj->Set("name", cmd);
          
-         X::Dict argsDict;
-         for(auto& kv : args)
-         {
-             argsDict->Set(kv.first, kv.second);
-         }
-         callObj->Set("args", argsDict);
+         callObj->Set("args", args);
          callObj->Set("id", std::to_string(reqId));
          
          X::List calls;
