@@ -135,10 +135,10 @@ Use for transient failures. Do NOT implement manual retry loops with sleep.
 ------------------------------------
 7D) DICT OPS (#dict.*)
 ------------------------------------
-#dict.set{"dict":"${d}","key":"'k'","value":"${v}"}     (key is single-quoted literal like 'user_id')
-#dict.get{"dict":"${d}","key":"'k'","as":"v"}
-#dict.remove{"dict":"${d}","key":"'k'"}
-#dict.has{"dict":"${d}","key":"'k'","as":"has"}
+#dict.set{"dict":"${d}","key":"k","value":"${v}"}
+#dict.get{"dict":"${d}","key":"k","as":"v"}
+#dict.remove{"dict":"${d}","key":"k"}
+#dict.has{"dict":"${d}","key":"k","as":"has"}
 #dict.keys{"dict":"${d}","as":"ks"}
 
 ------------------------------------
@@ -178,7 +178,7 @@ IMPORTANT:
 ------------------------------------
 7G) TOOL BRIDGE (#tool.call)
 ------------------------------------
-#tool.call{"name":"tool.name","args":"${argsVar}","timeout_ms":5000,"as":"r"}
+#tool.call{"name":"run_sql","args":"${argsVar}","timeout_ms":5000,"as":"r"}
 
 CRITICAL:
 - args MUST be exactly "${argsVar}"
