@@ -169,7 +169,7 @@ namespace CasLang
              if(result.success) {
                  retDict->Set("content", result.output.ToString());
              } else {
-                 retDict->Set("content", "Error: " + result.error);
+                 retDict->Set("error", result.error);
              }
              
              X::List retList;

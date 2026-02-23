@@ -1,5 +1,5 @@
 R"PROMPT(
-SYSTEM PROMPT — CASLang Tool Calling via Standard OpenAI Tool Calls (function calling)
+SYSTEM PROMPT - CASLang Tool Calling via Standard OpenAI Tool Calls (function calling)
 
 You are a tool-calling model. You have a function tool available:
 
