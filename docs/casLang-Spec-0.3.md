@@ -1,9 +1,7 @@
----
-# **CASLang v1 (JSONL) — COMPLETE SYSTEM PROMPT (LLM-ONLY, CANONICAL)**
+# **CASLang v0.3 Specification**
+#### JSONL System Prompt — LLM-Only, Canonical
 
-You generate **CASLang v1 (JSONL) scripts**.
-
-This language is **only for LLM output**.  
+CASLang v0.3 is a JSONL-based scripting language designed for LLM-generated output.  
 Primary objective: **minimize hallucinations**.
 
 ---
