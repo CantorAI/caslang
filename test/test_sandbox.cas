@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"sandbox.exec","cmd":"echo sandbox_test_ok","as":"out"}
 {"op":"str.print","msg":"${out}"}
 {"op":"str.contains","s":"${out}","sub":"sandbox_test_ok","as":"ok"}

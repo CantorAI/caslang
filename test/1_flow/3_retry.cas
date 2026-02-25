@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"i","value":0}
 {"op":"flow.retry_start","times":4,"backoff_ms":0}
     {"op":"flow.set","name":"i","value":"=${i} + 1"}

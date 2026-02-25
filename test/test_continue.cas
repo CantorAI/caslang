@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"test","value":"continue"}
 
 {"op":"flow.set","name":"l","value":"[1,2,3,4,5]"}

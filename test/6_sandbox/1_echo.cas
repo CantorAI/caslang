@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"sandbox.exec","cmd":"echo hello_world","as":"output"}
 {"op":"str.contains","s":"${output}","sub":"hello_world","as":"result"}
 {"op":"flow.if","cond":"'${result}' == 'True'"}

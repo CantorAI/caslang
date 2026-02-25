@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"sandbox.exec","cmd":"non_existent_command_xyz","as":"output"}
 {"op":"str.print","msg":"Output: ${output}"}
 {"op":"str.contains","s":"${output}","sub":"recog","as":"found_error1"}

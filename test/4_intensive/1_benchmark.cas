@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"time.now","as":"start_time"}
 {"op":"list.range","from":0,"to":50,"step":1,"as":"list_data"}
 {"op":"flow.set","name":"total","value":0}

@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 #flow.set{"name":"root","value":"d:/logs"}
 #fs.list{"dir":"${root}","pattern":"*","recursive":false,"include_dirs":false,"as":"paths"}
 #flow.set{"name":"total","value":0}

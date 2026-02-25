@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"x","value":10}
 {"op":"flow.set","name":"y","value":20}
 {"op":"flow.set","name":"z","value":"=${x} + ${y}"}

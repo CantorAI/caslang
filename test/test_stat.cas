@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"test","value":"stat"}
 
 {"op":"flow.set","name":"test_file","value":"D:/CantorAI/caslang/test/test_continue.cas"}

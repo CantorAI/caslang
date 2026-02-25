@@ -72,14 +72,20 @@ public:
                 // Split "ns.cmd" on first dot
                 auto dotPos = opStr.find('.');
                 if (dotPos == std::string::npos) {
-                    pa.error = "E1003: op must be namespace.command: " + opStr;
-                    out.emplace_back(std::move(pa));
-                    lineStart += line.size() + 1;
-                    continue;
+                    // Allow "caslang" header op without dot
+                    if (opStr == "caslang") {
+                        pa.ns = { "caslang" };
+                        pa.command = "";
+                    } else {
+                        pa.error = "E1003: op must be namespace.command: " + opStr;
+                        out.emplace_back(std::move(pa));
+                        lineStart += line.size() + 1;
+                        continue;
+                    }
+                } else {
+                    pa.ns = { opStr.substr(0, dotPos) };
+                    pa.command = opStr.substr(dotPos + 1);
                 }
-                
-                pa.ns = { opStr.substr(0, dotPos) };
-                pa.command = opStr.substr(dotPos + 1);
                 
                 // All non-"op" keys become args
                 for (auto it = j.begin(); it != j.end(); ++it) {

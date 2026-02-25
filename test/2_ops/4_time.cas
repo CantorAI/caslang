@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"time.now","as":"t1"}
 {"op":"time.sleep","ms":10}
 {"op":"time.now","as":"t2"}

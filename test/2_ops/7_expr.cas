@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"results","value":"{}"}
 {"op":"flow.set","name":"test_name","value":"Spec v2 Expressions"}
 

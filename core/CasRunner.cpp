@@ -115,11 +115,18 @@ namespace CasLang {
         // Split "ns.cmd" on first dot
         auto dotPos = opStr.find('.');
         if (dotPos == std::string::npos) {
-            outErr = "E1003 E_COMMAND_SYNTAX: op must be namespace.command, got: " + opStr;
-            return false;
+            // Allow "caslang" header op without dot
+            if (opStr == "caslang") {
+                ns = "caslang";
+                cmd = "";
+            } else {
+                outErr = "E1003 E_COMMAND_SYNTAX: op must be namespace.command, got: " + opStr;
+                return false;
+            }
+        } else {
+            ns = opStr.substr(0, dotPos);
+            cmd = opStr.substr(dotPos + 1);
         }
-        ns = opStr.substr(0, dotPos);
-        cmd = opStr.substr(dotPos + 1);
 
         // All non-"op" keys become args
         for (auto it = j.begin(); it != j.end(); ++it) {
@@ -523,7 +530,11 @@ namespace CasLang {
             bool isErr = false;
             std::string errMsg;
 
-            if (ns == "flow") {
+            // CasLang header line — no-op, just skip
+            if (ns == "caslang") {
+                pc++; continue;
+            }
+            else if (ns == "flow") {
                 if (cmd == "set") {
                     if (args.count("name") && args.count("value")) {
                         std::string name = args["name"].asString();

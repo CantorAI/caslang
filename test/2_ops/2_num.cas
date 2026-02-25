@@ -1,2 +1,3 @@
+{"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"v","value":"=1 + 2"}
 {"op":"flow.return","value":"${v}"}
