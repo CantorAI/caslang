@@ -5,6 +5,7 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
+#include <unordered_set>
 #include "xlang.h"
 #include "CasExpression.h"
 
@@ -796,9 +797,39 @@ namespace CasLang {
                 else if (m_externalHandler)
                 {
                     try {
-                        m_ctx._last = m_externalHandler(ns, cmd, args);
-                        if (args.count("as")) {
-                            m_ctx.vars[args["as"].asString()] = m_ctx._last;
+                        // v0.3 tool.call: args contains flat keys like
+                        //   {"name":"seek_by_text","input_text":"...","as":"result","timeout_ms":30000}
+                        // CasFilter::ExecuteExternalTool expects:
+                        //   args["name"] = tool name
+                        //   args["args"] = X::Dict of tool parameters
+                        //   args["timeout_ms"] = optional timeout
+                        // So we strip reserved keys and pack the rest into an X::Dict.
+
+                        // Save reserved values before rebuilding
+                        std::string asVar;
+                        if (args.count("as")) asVar = args["as"].asString();
+
+                        // Reserved keys that must NOT be forwarded as tool parameters
+                        static const std::unordered_set<std::string> reservedKeys = {
+                            "op", "name", "as", "timeout_ms", "target"
+                        };
+
+                        // Pack non-reserved keys into a dict for the tool
+                        X::Dict toolArgs;
+                        for (auto& kv : args) {
+                            if (reservedKeys.count(kv.first)) continue;
+                            toolArgs->Set(kv.first.c_str(), kv.second);
+                        }
+
+                        // Rebuild args map for the external handler interface
+                        std::unordered_map<std::string, X::Value> handlerArgs;
+                        if (args.count("name"))       handlerArgs["name"] = args["name"];
+                        if (args.count("timeout_ms")) handlerArgs["timeout_ms"] = args["timeout_ms"];
+                        handlerArgs["args"] = toolArgs;
+
+                        m_ctx._last = m_externalHandler(ns, cmd, handlerArgs);
+                        if (!asVar.empty()) {
+                            m_ctx.vars[asVar] = m_ctx._last;
                         }
                     } 
                     catch (const std::exception& e) {

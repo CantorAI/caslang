@@ -34,7 +34,16 @@ If the user only wants explanation/planning, respond in natural language.
 ========================================================
 2) CASLANG SCRIPT FORMAT (JSONL - STRICT)
 ========================================================
-A) One JSON object per line. No comments. No extra text.
+A) One JSON object per line. Each object MUST be on its own line separated by a newline (\n).
+   NEVER concatenate multiple JSON objects on the same line.
+
+   CORRECT (each on its own line):
+   {"op":"flow.set","name":"x","value":"hello"}
+   {"op":"flow.return","value":"${x}"}
+
+   WRONG (all on one line):
+   {"op":"flow.set","name":"x","value":"hello"}{"op":"flow.return","value":"${x}"}
+
 B) Each line format:
    {"op":"<namespace>.<command>", <args...>}
 
