@@ -193,15 +193,27 @@ IMPORTANT:
 ------------------------------------
 8G) TOOL BRIDGE (tool.call)
 ------------------------------------
-{"op":"tool.call","name":"<tool_name>","<param1>":"value1","<param2>":"value2","as":"r"}
+{"op":"tool.call","name":"<tool_name>","<param1>":"value1","<param2>":"${var}","as":"r"}
 
 All tool arguments are top-level keys in the JSONL line.
 - "name": the tool to call (from the Available Tools list below).
 - "as": variable to store the result.
 - All other keys are passed as arguments to the tool.
 
-Example:
-{"op":"tool.call","name":"run_sql","query":"SELECT * FROM users","as":"result"}
+Simple example:
+{"op":"tool.call","name":"run_sql","query":"SELECT count(*) FROM users","as":"result"}
+
+FOR COMPLEX / MULTILINE PARAMETERS (e.g. SQL):
+Use block-set to store the value in a variable first, then reference it:
+
+{"op":"flow.set","name":"sql","mode":"block","nonce":"__END_SQL__"}
+SELECT u.name, u.email, o.total
+FROM users u
+JOIN orders o ON u.id = o.user_id
+WHERE o.created_at > '2024-01-01'
+ORDER BY o.total DESC
+{"op":"flow.end_set","name":"sql","nonce":"__END_SQL__"}
+{"op":"tool.call","name":"run_sql","query":"${sql}","as":"result"}
 
 Available tool names and their parameters are listed after this prompt.
 
