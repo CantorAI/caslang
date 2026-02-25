@@ -1,2 +1,2 @@
-#num.add{"a":1,"b":2,"as":"v"}
-#flow.return{"value":"${v}"}
+{"op":"flow.set","name":"v","value":"=1 + 2"}
+{"op":"flow.return","value":"${v}"}

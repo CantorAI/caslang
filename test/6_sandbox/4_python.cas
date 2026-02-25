@@ -1,16 +1,16 @@
-#fs.write_file{"path":"py_complex.py","data":"import sys\nimport json\n\ndef main():\n    data = {'status': 'success', 'value': 100 * 5, 'args': sys.argv[1:]}\n    print(json.dumps(data))\n\nif __name__ == '__main__':\n    main()"}
+{"op":"fs.write_file","path":"py_complex.py","data":"import sys\nimport json\n\ndef main():\n    data = {'status': 'success', 'value': 100 * 5, 'args': sys.argv[1:]}\n    print(json.dumps(data))\n\nif __name__ == '__main__':\n    main()"}
 
-#sandbox.exec{"cmd":"python py_complex.py arg1 arg2","as":"output"}
-#str.print{"msg":"Complex Python Output: ${output}"}
+{"op":"sandbox.exec","cmd":"python py_complex.py arg1 arg2","as":"output"}
+{"op":"str.print","msg":"Complex Python Output: ${output}"}
 
-#str.contains{"s":"${output}","sub":"success","as":"has_success"}
-#str.contains{"s":"${output}","sub":"500","as":"has_val"}
-#str.contains{"s":"${output}","sub":"arg1","as":"has_arg"}
+{"op":"str.contains","s":"${output}","sub":"success","as":"has_success"}
+{"op":"str.contains","s":"${output}","sub":"500","as":"has_val"}
+{"op":"str.contains","s":"${output}","sub":"arg1","as":"has_arg"}
 
-#flow.if{"cond":"'${has_success}' == 'True' and '${has_val}' == 'True' and '${has_arg}' == 'True'"}
-#str.print{"msg":"Complex Python Test OK"}
-#flow.else{}
-#str.print{"msg":"Complex Python Test Failed: ${output}"}
-#flow.endif{}
+{"op":"flow.if","cond":"'${has_success}' == 'True' and '${has_val}' == 'True' and '${has_arg}' == 'True'"}
+{"op":"str.print","msg":"Complex Python Test OK"}
+{"op":"flow.else"}
+{"op":"str.print","msg":"Complex Python Test Failed: ${output}"}
+{"op":"flow.endif"}
 
-#fs.delete{"path":"py_complex.py"}
+{"op":"fs.delete","path":"py_complex.py"}

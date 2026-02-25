@@ -1,15 +1,13 @@
-#flow.set{"name":"dir","value":"d:/CantorAI/caslang/test/user_test_env"}
-#fs.list{"dir":"${dir}","pattern":"*","recursive":true,"as":"list"}
-#flow.set{"name":"file_count","value":0}
-#flow.set{"name":"folder_count","value":0}
-#flow.loop_start{"var":"item","in":"${list}"}
-  #str.contains{"s":"${item}","needle":".","as":"has_ext"}
-  #flow.if{"cond":"'${has_ext}' == 'True'"}
-    #num.add{"a":"${file_count}","b":1,"as":"new_file"}
-    #flow.set{"name":"file_count","value":"${new_file}"}
-  #flow.else{}
-    #num.add{"a":"${folder_count}","b":1,"as":"new_folder"}
-    #flow.set{"name":"folder_count","value":"${new_folder}"}
-  #flow.endif{}
-#flow.loop_end{}
-#flow.return{"value":"{\"files\":${file_count},\"folders\":${folder_count}}"}
+{"op":"flow.set","name":"dir","value":"d:/CantorAI/caslang/test"}
+{"op":"fs.list","dir":"${dir}","pattern":"*","recursive":true,"as":"list"}
+{"op":"flow.set","name":"file_count","value":0}
+{"op":"flow.set","name":"folder_count","value":0}
+{"op":"flow.loop_start","var":"item","in":"${list}"}
+  {"op":"str.contains","s":"${item}","sub":".","as":"has_ext"}
+  {"op":"flow.if","cond":"'${has_ext}' == 'True'"}
+    {"op":"flow.set","name":"file_count","value":"=${file_count} + 1"}
+  {"op":"flow.else"}
+    {"op":"flow.set","name":"folder_count","value":"=${folder_count} + 1"}
+  {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+{"op":"flow.return","value":"{\"files\":${file_count},\"folders\":${folder_count}}"}

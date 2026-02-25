@@ -1,9 +1,9 @@
-#sandbox.exec{"cmd":"echo sandbox_test_ok","as":"out"}
-#str.print{"msg":"${out}"}
-#str.contains{"s":"${out}","sub":"sandbox_test_ok","as":"ok"}
-#str.print{"msg":"DEBUG: out='${out}' ok='${ok}'"}
-#flow.if{"cond":"'${ok}' == 'True'"}
-#str.print{"msg":"Sandbox Execute Success"}
-#flow.else{}
-#str.print{"msg":"Sandbox Execute Failed"}
-#flow.endif{}
+{"op":"sandbox.exec","cmd":"echo sandbox_test_ok","as":"out"}
+{"op":"str.print","msg":"${out}"}
+{"op":"str.contains","s":"${out}","sub":"sandbox_test_ok","as":"ok"}
+{"op":"str.print","msg":"DEBUG: out='${out}' ok='${ok}'"}
+{"op":"flow.if","cond":"'${ok}' == 'True'"}
+{"op":"str.print","msg":"Sandbox Execute Success"}
+{"op":"flow.else"}
+{"op":"str.print","msg":"Sandbox Execute Failed"}
+{"op":"flow.endif"}

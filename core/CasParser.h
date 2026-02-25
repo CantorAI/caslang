@@ -5,6 +5,7 @@
 #include <cctype>
 #include <stdexcept>
 #include <unordered_map>
+#include <sstream>
 
 #include <nlohmann/json.hpp>
 #include "xlang.h"
@@ -16,61 +17,84 @@ namespace CasLang {
 struct ParsedAction {
     std::vector<std::string> ns; // e.g. {"fs"}
     std::string command;         // e.g. "open"
-    std::unordered_map<std::string, X::Value> args; // <-- changed type
+    std::unordered_map<std::string, X::Value> args;
     size_t start = 0, end = 0;
     std::string error;
 };
 
 class CasParser {
 public:
+    // JSONL parser: splits input into lines, parses each as {"op":"ns.cmd",...}
     std::vector<ParsedAction> Extract(const std::string& text) {
-        src_ = &text; i_ = 0; n_ = text.size();
         std::vector<ParsedAction> out;
-        while (i_ < n_) {
-            if ((*src_)[i_] == '#') {
-                auto maybe = parseOne();
-                if (maybe.has_value()) out.emplace_back(std::move(*maybe));
-                else ++i_;
+        std::istringstream iss(text);
+        std::string line;
+        size_t lineStart = 0;
+        
+        while (std::getline(iss, line)) {
+            // Trim whitespace
+            size_t first = line.find_first_not_of(" \t\r\n");
+            size_t last  = line.find_last_not_of(" \t\r\n");
+            if (first == std::string::npos) {
+                lineStart += line.size() + 1;
+                continue;
             }
-            else { ++i_; }
+            std::string trimmed = line.substr(first, last - first + 1);
+            
+            // Skip empty lines and non-JSON lines
+            if (trimmed.empty() || trimmed[0] != '{') {
+                lineStart += line.size() + 1;
+                continue;
+            }
+
+            ParsedAction pa;
+            pa.start = lineStart;
+            pa.end = lineStart + line.size();
+            
+            try {
+                json j = json::parse(trimmed);
+                if (!j.is_object()) {
+                    pa.error = "Line is not a JSON object";
+                    out.emplace_back(std::move(pa));
+                    lineStart += line.size() + 1;
+                    continue;
+                }
+                
+                if (!j.contains("op") || !j["op"].is_string()) {
+                    pa.error = "Missing or invalid 'op' field";
+                    out.emplace_back(std::move(pa));
+                    lineStart += line.size() + 1;
+                    continue;
+                }
+
+                std::string opStr = j["op"].get<std::string>();
+                
+                // Split "ns.cmd" on first dot
+                auto dotPos = opStr.find('.');
+                if (dotPos == std::string::npos) {
+                    pa.error = "E1003: op must be namespace.command: " + opStr;
+                    out.emplace_back(std::move(pa));
+                    lineStart += line.size() + 1;
+                    continue;
+                }
+                
+                pa.ns = { opStr.substr(0, dotPos) };
+                pa.command = opStr.substr(dotPos + 1);
+                
+                // All non-"op" keys become args
+                for (auto it = j.begin(); it != j.end(); ++it) {
+                    if (it.key() == "op") continue;
+                    pa.args.emplace(it.key(), toXScalar(it.value()));
+                }
+            }
+            catch (const std::exception& e) {
+                pa.error = std::string("JSON parse error: ") + e.what();
+            }
+            
+            out.emplace_back(std::move(pa));
+            lineStart += line.size() + 1;
         }
         return out;
-    }
-
-private:
-    std::optional<ParsedAction> parseOne() {
-        size_t hash = i_++; // '#'
-        ParsedAction pa; pa.start = hash;
-
-        // qualified name
-        std::vector<std::string> parts;
-        std::string id;
-        if (!parseIdent(id)) return std::nullopt;
-        parts.push_back(std::move(id));
-        while (peek() == '.') { ++i_; if (!parseIdent(id)) return std::nullopt; parts.push_back(id); }
-        pa.command = parts.back(); parts.pop_back(); pa.ns = std::move(parts);
-
-        skipWS();
-        if (peek() != '{') { pa.end = i_; return pa; } // no-arg command
-
-        std::string obj = readBalanced('{', '}');
-        if (obj.empty()) { pa.error = "Unbalanced JSON braces"; pa.end = i_; return pa; }
-
-        try {
-            json j = json::parse(obj);
-            if (!j.is_object()) throw std::runtime_error("Payload must be a JSON object");
-            // Only scalar values -> X::Value
-            for (auto it = j.begin(); it != j.end(); ++it) {
-                const auto& k = it.key();
-                const auto& v = it.value();
-                pa.args.emplace(k, toXScalar(v));
-            }
-        }
-        catch (const std::exception& e) {
-            pa.error = std::string("JSON parse error: ") + e.what();
-        }
-        pa.end = i_;
-        return pa;
     }
 
     // Convert ONLY scalars; arrays/objects are stringified JSON to keep scalar contract.
@@ -84,39 +108,5 @@ private:
         // composite -> stringify
         return X::Value(v.dump());
     }
-
-    // helpers
-    bool parseIdent(std::string& out) {
-        if (i_ >= n_) return false;
-        char c = (*src_)[i_];
-        if (!(std::isalpha((unsigned char)c) || c == '_')) return false;
-        size_t s = i_++;
-        while (i_ < n_) {
-            char d = (*src_)[i_];
-            if (std::isalnum((unsigned char)d) || d == '_' || d == '-') ++i_;
-            else break;
-        }
-        out = src_->substr(s, i_ - s);
-        return true;
-    }
-    std::string readBalanced(char open, char close) {
-        if (peek() != open) return {};
-        size_t start = i_;
-        int depth = 0;
-        bool inStr = false; char quote = 0; bool esc = false;
-        do {
-            char c = (*src_)[i_++];
-            if (inStr) { if (esc) { esc = false; continue; } if (c == '\\') { esc = true; continue; } if (c == quote) inStr = false; continue; }
-            if (c == '"' || c == '\'') { inStr = true; quote = c; continue; }
-            if (c == open) ++depth; else if (c == close) --depth;
-        } while (i_ < n_ && depth>0);
-        if (depth != 0) return {};
-        return src_->substr(start, i_ - start);
-    }
-    void skipWS() { while (i_ < n_) { char c = (*src_)[i_]; if (c == ' ' || c == '\t' || c == '\n' || c == '\r') { ++i_; continue; } break; } }
-    char peek() const { return (i_ < n_) ? (*src_)[i_] : '\0'; }
-
-    const std::string* src_{ nullptr };
-    size_t i_{ 0 }, n_{ 0 };
 };
 }

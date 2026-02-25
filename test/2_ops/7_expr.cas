@@ -1,21 +1,21 @@
-#flow.set{"name":"results","value":{}}
-#flow.set{"name":"test_name","value":"Spec v2 Expressions"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 Expressions"}
 
-#flow.set{"name":"a","value":5}
-#flow.set{"name":"b","value":3}
-#flow.set{"name":"add_res","value":"=${a} + ${b}"}
-#flow.set{"name":"mul_res","value":"=${a} * ${b}"}
+{"op":"flow.set","name":"a","value":5}
+{"op":"flow.set","name":"b","value":3}
+{"op":"flow.set","name":"add_res","value":"=${a} + ${b}"}
+{"op":"flow.set","name":"mul_res","value":"=${a} * ${b}"}
 
-#flow.if{"cond":"${add_res} == 8"}
-    #dict.set{"dict":"${results}","key":"'expr_add'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'expr_add'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${add_res} == 8"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_add'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_add'","value":false}
+{"op":"flow.endif"}
 
-#flow.if{"cond":"${mul_res} == 15"}
-    #dict.set{"dict":"${results}","key":"'expr_mul'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'expr_mul'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${mul_res} == 15"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_mul'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_mul'","value":false}
+{"op":"flow.endif"}
 
-#flow.return{"value":"${results}"}
+{"op":"flow.return","value":"${results}"}

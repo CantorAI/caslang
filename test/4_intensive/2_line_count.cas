@@ -1,35 +1,35 @@
-#flow.set{"name":"root","value":"D:/CantorAI1/Cantor_FastUdp"}
-#str.print{"msg":"[Start] Counting lines in: ${root}"}
+{"op":"flow.set","name":"root","value":"D:/CantorAI/caslang"}
+{"op":"str.print","msg":"[Start] Counting lines in: ${root}"}
 
-#fs.list{"dir":"${root}","recursive":true,"as":"filesJson"}
-#flow.set{"name":"totalLines","value":0}
-#flow.set{"name":"fileCount","value":0}
+{"op":"fs.list","dir":"${root}","recursive":true,"as":"filesJson"}
+{"op":"flow.set","name":"totalLines","value":0}
+{"op":"flow.set","name":"fileCount","value":0}
 
-#loop.start{"var":"file","in":"${filesJson}"}
-    #str.lower{"s":"${file}","as":"pathLower"}
-    #str.slice{"s":"${pathLower}","start":-4,"as":"ext4"}
-    #str.slice{"s":"${pathLower}","start":-2,"as":"ext2"}
-    
-    #flow.set{"name":"isSrc","value":false}
-    #flow.if{"cond":"\"${ext4}\" == \".cpp\""}
-        #flow.set{"name":"isSrc","value":true}
-    #flow.endif{}
-    #flow.if{"cond":"\"${ext2}\" == \".h\""}
-        #flow.set{"name":"isSrc","value":true}
-    #flow.endif{}
+{"op":"flow.loop_start","var":"file","in":"${filesJson}"}
+    {"op":"str.lower","s":"${file}","as":"pathLower"}
+    {"op":"str.slice","s":"${pathLower}","start":-4,"as":"ext4"}
+    {"op":"str.slice","s":"${pathLower}","start":-2,"as":"ext2"}
 
-    #flow.if{"cond":"${isSrc}"}
-        #fs.read_file{"path":"${file}","as":"content"}
-        #str.count{"s":"${content}","sub":"\n","as":"lines"}
-        #num.add{"x":"${lines}","y":1,"as":"lines"}
-        
-        #num.add{"x":"${totalLines}","y":"${lines}","as":"totalLines"}
-        #num.add{"x":"${fileCount}","y":1,"as":"fileCount"}
-        #str.print{"msg":"[FILE] ${file}: ${lines} lines"}
-    #flow.endif{}
-#loop.end{}
+    {"op":"flow.set","name":"isSrc","value":false}
+    {"op":"flow.if","cond":"\"${ext4}\" == \".cpp\""}
+        {"op":"flow.set","name":"isSrc","value":true}
+    {"op":"flow.endif"}
+    {"op":"flow.if","cond":"\"${ext2}\" == \".h\""}
+        {"op":"flow.set","name":"isSrc","value":true}
+    {"op":"flow.endif"}
 
-#str.print{"msg":"[Complete] Scanned ${fileCount} files."}
-#str.print{"msg":"[Complete] Total lines: ${totalLines}"}
-#str.log{"msg":"[LOG] Total lines: ${totalLines}"}
-#flow.return{"value":"${totalLines}"}
+    {"op":"flow.if","cond":"${isSrc}"}
+        {"op":"fs.read_file","path":"${file}","as":"content"}
+        {"op":"str.count","s":"${content}","sub":"\\n","as":"lines"}
+        {"op":"flow.set","name":"lines","value":"=${lines} + 1"}
+
+        {"op":"flow.set","name":"totalLines","value":"=${totalLines} + ${lines}"}
+        {"op":"flow.set","name":"fileCount","value":"=${fileCount} + 1"}
+        {"op":"str.print","msg":"[FILE] ${file}: ${lines} lines"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+
+{"op":"str.print","msg":"[Complete] Scanned ${fileCount} files."}
+{"op":"str.print","msg":"[Complete] Total lines: ${totalLines}"}
+{"op":"str.log","msg":"[LOG] Total lines: ${totalLines}"}
+{"op":"flow.return","value":"${totalLines}"}

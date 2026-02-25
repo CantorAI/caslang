@@ -1,12 +1,12 @@
-#flow.set{"name":"test","value":"stat"}
+{"op":"flow.set","name":"test","value":"stat"}
 
-#flow.set{"name":"test_file","value":"D:/CantorAI/caslang/test/test_continue.cas"}
-#fs.stat{"path":"${test_file}","as":"st"}
+{"op":"flow.set","name":"test_file","value":"D:/CantorAI/caslang/test/test_continue.cas"}
+{"op":"fs.stat","path":"${test_file}","as":"st"}
 
-#str.print{"msg":"DEBUG: exists=${st['exists']} is_file=${st['is_file']}"}
-#flow.if{"cond":"'${st['is_file']}' == 'True'"}
-    #str.print{"msg":"SUCCESS: stat is a dict, is_file=True"}
-    #str.print{"msg":"Size: ${st['size']}"}
-#flow.else{}
-    #str.print{"msg":"FAILURE: stat check failed"}
-#flow.endif{}
+{"op":"str.print","msg":"DEBUG: exists=${st['exists']} is_file=${st['is_file']}"}
+{"op":"flow.if","cond":"'${st['is_file']}' == 'True'"}
+    {"op":"str.print","msg":"SUCCESS: stat is a dict, is_file=True"}
+    {"op":"str.print","msg":"Size: ${st['size']}"}
+{"op":"flow.else"}
+    {"op":"str.print","msg":"FAILURE: stat check failed"}
+{"op":"flow.endif"}

@@ -1,58 +1,58 @@
-#flow.set{"name":"root","value":"d:/test/caslang_fs_test"}
-#str.print{"msg":"Starting FS Test in ${root}"}
-#str.log{"msg":"[LOG] Starting FS Test"}
+{"op":"flow.set","name":"root","value":"d:/test/caslang_fs_test"}
+{"op":"str.print","msg":"Starting FS Test in ${root}"}
+{"op":"str.log","msg":"[LOG] Starting FS Test"}
 
-#fs.exists{"path":"${root}","as":"exists"}
-#flow.if{"cond":"${exists}"}
-    #str.print{"msg":"Cleaning up previous test dir..."}
-    #fs.delete{"path":"${root}","recursive":true}
-#flow.endif{}
+{"op":"fs.exists","path":"${root}","as":"exists"}
+{"op":"flow.if","cond":"${exists}"}
+    {"op":"str.print","msg":"Cleaning up previous test dir..."}
+    {"op":"fs.delete","path":"${root}","recursive":true}
+{"op":"flow.endif"}
 
-#str.print{"msg":"Creating directory..."}
-#fs.mkdir{"path":"${root}","recursive":true,"as":"ok"}
-#str.print{"msg":"Mkdir result: '${ok}'"}
-#flow.if{"cond":"!${ok}"}
-    #str.print{"msg":"Failed to create directory"}
-    #str.log{"msg":"[LOG] Failed to create directory"}
-    #flow.return{"value":false}
-#flow.endif{}
+{"op":"str.print","msg":"Creating directory..."}
+{"op":"fs.mkdir","path":"${root}","recursive":true,"as":"ok"}
+{"op":"str.print","msg":"Mkdir result: '${ok}'"}
+{"op":"flow.if","cond":"!${ok}"}
+    {"op":"str.print","msg":"Failed to create directory"}
+    {"op":"str.log","msg":"[LOG] Failed to create directory"}
+    {"op":"flow.return","value":false}
+{"op":"flow.endif"}
 
-#str.print{"msg":"Writing file..."}
-#fs.write_file{"path":"${root}/test.txt","data":"hello world","as":"bytes"}
-#flow.if{"cond":"${bytes} != 11"}
-    #str.print{"msg":"Write failed, bytes mismatch. Expected 11, got ${bytes}"}
-    #str.log{"msg":"[LOG] Write failed"}
-    #flow.return{"value":false}
-#flow.endif{}
+{"op":"str.print","msg":"Writing file..."}
+{"op":"fs.write_file","path":"${root}/test.txt","data":"hello world","as":"bytes"}
+{"op":"flow.if","cond":"${bytes} != 11"}
+    {"op":"str.print","msg":"Write failed, bytes mismatch. Expected 11, got ${bytes}"}
+    {"op":"str.log","msg":"[LOG] Write failed"}
+    {"op":"flow.return","value":false}
+{"op":"flow.endif"}
 
-#str.print{"msg":"Reading file..."}
-#fs.read_file{"path":"${root}/test.txt","as":"content"}
-#flow.if{"cond":"\"${content}\" != \"hello world\""}
-    #str.print{"msg":"Read mismatch. Expected 'hello world', got '${content}'"}
-    #str.log{"msg":"[LOG] Read mismatch"}
-    #flow.return{"value":false}
-#flow.endif{}
+{"op":"str.print","msg":"Reading file..."}
+{"op":"fs.read_file","path":"${root}/test.txt","as":"content"}
+{"op":"flow.if","cond":"\"${content}\" != \"hello world\""}
+    {"op":"str.print","msg":"Read mismatch. Expected 'hello world', got '${content}'"}
+    {"op":"str.log","msg":"[LOG] Read mismatch"}
+    {"op":"flow.return","value":false}
+{"op":"flow.endif"}
 
-#str.print{"msg":"Copying file..."}
-#fs.copy{"src":"${root}/test.txt","dst":"${root}/copy.txt"}
-#fs.exists{"path":"${root}/copy.txt","as":"exists"}
-#flow.if{"cond":"!${exists}"}
-    #str.print{"msg":"Copy failed"}
-    #str.log{"msg":"[LOG] Copy failed"}
-    #flow.return{"value":false}
-#flow.endif{}
+{"op":"str.print","msg":"Copying file..."}
+{"op":"fs.copy","src":"${root}/test.txt","dst":"${root}/copy.txt"}
+{"op":"fs.exists","path":"${root}/copy.txt","as":"exists"}
+{"op":"flow.if","cond":"!${exists}"}
+    {"op":"str.print","msg":"Copy failed"}
+    {"op":"str.log","msg":"[LOG] Copy failed"}
+    {"op":"flow.return","value":false}
+{"op":"flow.endif"}
 
-#str.print{"msg":"Listing files..."}
-#fs.list{"dir":"${root}","as":"list"}
-#str.print{"msg":"List result: ${list}"}
+{"op":"str.print","msg":"Listing files..."}
+{"op":"fs.list","dir":"${root}","as":"list"}
+{"op":"str.print","msg":"List result: ${list}"}
 
-#str.print{"msg":"Stat file..."}
-#fs.stat{"path":"${root}/test.txt","as":"meta"}
-#str.print{"msg":"Stat result: ${meta}"}
+{"op":"str.print","msg":"Stat file..."}
+{"op":"fs.stat","path":"${root}/test.txt","as":"meta"}
+{"op":"str.print","msg":"Stat result: ${meta}"}
 
-#str.print{"msg":"Cleaning up..."}
-#fs.delete{"path":"${root}","recursive":true}
+{"op":"str.print","msg":"Cleaning up..."}
+{"op":"fs.delete","path":"${root}","recursive":true}
 
-#str.print{"msg":"FS Test Complete"}
-#str.log{"msg":"[LOG] FS Test Complete"}
-#flow.return{"value":true}
+{"op":"str.print","msg":"FS Test Complete"}
+{"op":"str.log","msg":"[LOG] FS Test Complete"}
+{"op":"flow.return","value":true}

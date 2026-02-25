@@ -1,0 +1,13 @@
+#flow.set{"name":"root","value":"d:/logs"}
+#fs.list{"dir":"${root}","pattern":"*","recursive":false,"include_dirs":false,"as":"paths"}
+#flow.set{"name":"total","value":0}
+#flow.loop_start{"var":"p","in":"${paths}"}
+  #fs.read_file{"path":"${p}","offset":0,"max_bytes":-1,"as":"content"}
+  #str.len{"s":"${content}","as":"len"}
+  #str.slice{"s":"${content}","start":0,"end":50,"as":"snippet"}
+  #str.print{"msg":"Len: ${len}, Snippet: ${snippet}"}
+  #str.count{"s":"${content}","sub":"\n","as":"lines"}
+  #flow.set{"name":"total","value":"=${total} + ${lines}"}
+  #str.print{"msg":"File: ${p}, Lines: ${lines}, Total: ${total}"}
+#flow.loop_end{}
+#str.print{"msg":"Final Total: ${total}"}

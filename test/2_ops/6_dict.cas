@@ -1,15 +1,13 @@
-#flow.set{"name":"root","value":"D:/CantorAI/caslang"}
-#fs.stat{"path":"${root}/core/CasFSOps.h","as":"st"}
-#str.print{"msg":"Full Stat: ${st}"}
+{"op":"flow.set","name":"root","value":"D:/CantorAI/caslang"}
+{"op":"fs.stat","path":"${root}/core/CasFSOps.h","as":"st"}
+{"op":"str.print","msg":"Full Stat: ${st}"}
 
-#dict.get{"dict":"${st}", "key":"size", "as":"size"}
-#str.print{"msg":"File Size: ${size}"}
+{"op":"str.print","msg":"File Size: ${st['size']}"}
 
-#dict.get{"dict":"${st}", "key":"exists", "as":"exists"}
-#str.print{"msg":"File Exists: ${exists}"}
+{"op":"str.print","msg":"File Exists: ${st['exists']}"}
 
-#flow.if{"cond":"${size} > 0"}
-  #str.print{"msg":"Size check passed"}
-#flow.endif{}
+{"op":"flow.if","cond":"${st['size']} > 0"}
+  {"op":"str.print","msg":"Size check passed"}
+{"op":"flow.endif"}
 
-#flow.return{"value":"${size}"}
+{"op":"flow.return","value":"${st['size']}"}

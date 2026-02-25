@@ -1,10 +1,7 @@
-# Test dict.get and str.count_match
+{"op":"flow.set","name":"d","value":"{}"}
+{"op":"dict.set","dict":"${d}","key":"'foo'","value":"bar"}
+{"op":"str.print","msg":"Got: ${d['foo']}"}
 
-#flow.set{"name":"d","value":"{}"}
-#dict.set{"dict":"${d}","key":"'foo'","value":"bar"}
-#dict.get{"dict":"${d}","key":"'foo'","as":"val"}
-#str.print{"msg":"Got: ${val}"}
-
-#flow.set{"name":"s","value":"Hello World Hello"}
-#str.count_match{"s":"${s}","regex":"Hello","case":"sensitive","as":"count"}
-#str.print{"msg":"Count: ${count}"}
+{"op":"flow.set","name":"s","value":"Hello World Hello"}
+{"op":"str.count_match","s":"${s}","regex":"Hello","case":"sensitive","as":"count"}
+{"op":"str.print","msg":"Count: ${count}"}

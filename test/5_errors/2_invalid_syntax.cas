@@ -1,2 +1,2 @@
 invalid line should fail validation
-#str.print{"msg":"Should not run"}
+{"op":"str.print","msg":"Should not run"}

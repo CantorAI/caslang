@@ -1,22 +1,22 @@
-#flow.set{"name":"results","value":{}}
-#flow.set{"name":"test_name","value":"Spec v2 Dict Ops"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 Dict Ops"}
 
-#flow.set{"name":"d","value":{}}
-#dict.set{"dict":"${d}","key":"'k1'","value":"v1"}
-#dict.has{"dict":"${d}","key":"'k1'","as":"has_k1"}
-#dict.remove{"dict":"${d}","key":"'k1'"}
-#dict.has{"dict":"${d}","key":"'k1'","as":"has_k1_after"}
+{"op":"flow.set","name":"d","value":"{}"}
+{"op":"dict.set","dict":"${d}","key":"'k1'","value":"v1"}
+{"op":"dict.has","dict":"${d}","key":"'k1'","as":"has_k1"}
+{"op":"dict.remove","dict":"${d}","key":"'k1'"}
+{"op":"dict.has","dict":"${d}","key":"'k1'","as":"has_k1_after"}
 
-#flow.if{"cond":"'${has_k1}' == 'True'"}
-    #dict.set{"dict":"${results}","key":"'dict_has'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'dict_has'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"'${has_k1}' == 'True'"}
+    {"op":"dict.set","dict":"${results}","key":"'dict_has'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'dict_has'","value":false}
+{"op":"flow.endif"}
 
-#flow.if{"cond":"${has_k1_after} == false"}
-    #dict.set{"dict":"${results}","key":"'dict_remove'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'dict_remove'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${has_k1_after} == false"}
+    {"op":"dict.set","dict":"${results}","key":"'dict_remove'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'dict_remove'","value":false}
+{"op":"flow.endif"}
 
-#flow.return{"value":"${results}"}
+{"op":"flow.return","value":"${results}"}

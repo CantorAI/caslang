@@ -1,2 +1,2 @@
-#str.upper{"s":"abc","as":"u"}
-#flow.return{"value":"${u}"}
+{"op":"str.upper","s":"abc","as":"u"}
+{"op":"flow.return","value":"${u}"}

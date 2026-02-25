@@ -1,4 +1,4 @@
-#time.now{"as":"t1"}
-#time.sleep{"ms":10}
-#time.now{"as":"t2"}
-#flow.return{"value":"done"}
+{"op":"time.now","as":"t1"}
+{"op":"time.sleep","ms":10}
+{"op":"time.now","as":"t2"}
+{"op":"flow.return","value":"done"}

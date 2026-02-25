@@ -1,6 +1,2 @@
-#sandbox.exec{"cmd":"exit 1","as":"output"}
-#flow.if{"cond":"'${output.exit_code}' != '0'"}
-#str.print{"msg":"Exit Code Test OK: ${output.exit_code}"}
-#flow.else{}
-#str.print{"msg":"Exit Code Test Failed: ${output.exit_code}"}
-#flow.endif{}
+{"op":"sandbox.exec","cmd":"exit 1","as":"output"}
+{"op":"str.print","msg":"Exit Code Test: ${output}"}

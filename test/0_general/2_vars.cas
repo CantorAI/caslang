@@ -1,4 +1,4 @@
-#flow.set{"name":"x","value":10}
-#flow.set{"name":"y","value":20}
-#num.add{"a":"${x}","b":"${y}","as":"z"}
-#flow.return{"value":"${z}"}
+{"op":"flow.set","name":"x","value":10}
+{"op":"flow.set","name":"y","value":20}
+{"op":"flow.set","name":"z","value":"=${x} + ${y}"}
+{"op":"flow.return","value":"${z}"}

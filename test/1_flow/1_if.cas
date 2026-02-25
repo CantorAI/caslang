@@ -1,7 +1,7 @@
-#flow.set{"name":"x","value":5}
-#flow.if{"cond":"${x} > 3"}
-    #flow.set{"name":"res","value":"big"}
-#flow.else{}
-    #flow.set{"name":"res","value":"small"}
-#flow.endif{}
-#flow.return{"value":"${res}"}
+{"op":"flow.set","name":"x","value":5}
+{"op":"flow.if","cond":"${x} > 3"}
+    {"op":"flow.set","name":"res","value":"big"}
+{"op":"flow.else"}
+    {"op":"flow.set","name":"res","value":"small"}
+{"op":"flow.endif"}
+{"op":"flow.return","value":"${res}"}

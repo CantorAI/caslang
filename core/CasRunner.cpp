@@ -3,10 +3,13 @@
 #include <iostream>
 #include <regex>
 #include <thread>
-#include <algorithm> // Added for transform
-#include <functional> // [NEW] Added for std::function
+#include <algorithm>
+#include <functional>
 #include "xlang.h"
-#include "CasExpression.h" // [NEW]
+#include "CasExpression.h"
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 namespace CasLang {
     
@@ -15,7 +18,6 @@ namespace CasLang {
 
     // Condition Evaluator (Simple)
     bool EvaluateCond(const std::string& cond) {
-        // ... (rest of function using EvaluateExpr)
         std::string t = cond;
         // Trim
         t.erase(0, t.find_first_not_of(" \t"));
@@ -71,106 +73,160 @@ namespace CasLang {
         std::cerr << "[CasLang Error] " << msg << std::endl;
     }
 
-    // Basic parser for #ns.cmd{json}
-    bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args, std::string& outErr) {
+    // Convert ONLY scalars; arrays/objects are stringified JSON to keep scalar contract.
+    static X::Value toXScalar(const json& v) {
+        if (v.is_null())  return X::Value();
+        if (v.is_boolean()) return X::Value(v.get<bool>());
+        if (v.is_number_integer()) return X::Value((int64_t)v.get<long long>());
+        if (v.is_number_unsigned()) return X::Value((int64_t)v.get<unsigned long long>());
+        if (v.is_number_float()) return X::Value(v.get<double>());
+        if (v.is_string()) return X::Value(v.get<std::string>());
+        // composite -> stringify
+        return X::Value(v.dump());
+    }
+
+    // JSONL parser: {"op":"ns.cmd", ...args}
+    bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd,
+        std::unordered_map<std::string, X::Value>& args, std::string& outErr) {
         if (line.empty()) return false;
-        size_t hashPos = line.find('#');
-        if (hashPos == std::string::npos) {
-             outErr = "Missing '#' at start of command. Line: [" + line + "]";
-             return false;
+
+        // Parse as JSON object
+        json j;
+        try {
+            j = json::parse(line);
         }
-
-        size_t bracePos = line.find('{', hashPos);
-        if (bracePos == std::string::npos) {
-             outErr = "Missing '{' for JSON arguments. Line: [" + line + "]";
-             return false;
-        }
-
-        std::string fullCmd = line.substr(hashPos + 1, bracePos - (hashPos + 1));
-        
-        size_t dotPos = fullCmd.find('.');
-        if (dotPos == std::string::npos) {
-             outErr = "Command format must be #namespace.command";
-             return false;
-        }
-        ns = fullCmd.substr(0, dotPos);
-        cmd = fullCmd.substr(dotPos + 1);
-
-        size_t closeBrace = line.rfind('}');
-        if (closeBrace == std::string::npos || closeBrace < bracePos) {
-             outErr = "Missing closing '}' for JSON arguments";
-             return false;
-        }
-
-        std::string jsonStr = line.substr(bracePos, closeBrace - bracePos + 1);
-        
-        X::Runtime rt;
-        X::Package json(rt, "json", "");
-        X::Value jsonVal = json["loads"](jsonStr);
-
-        if (!jsonVal.IsObject()) {
-            if (jsonStr.find("\\n#") != std::string::npos) {
-                 outErr = "E1002 E_SCRIPT_FORMAT: Malformed script. Found escaped newline '\\n' between commands. Use real line breaks (ASCII 10).";
-                 return false;
-            }
-            outErr = "Args must be JSON object: " + jsonStr;
-            //LogError(outErr);
+        catch (const std::exception& e) {
+            outErr = std::string("E1004 E_JSON_INVALID: ") + e.what();
             return false;
         }
 
-        X::Dict dict(jsonVal);
-        dict->Enum([&](X::Value& k, X::Value& v){
-            args[k.asString()] = v;
-        });
+        if (!j.is_object()) {
+            outErr = "E1002 E_LINE_NOT_JSON_OBJECT";
+            return false;
+        }
+
+        if (!j.contains("op") || !j["op"].is_string()) {
+            outErr = "E2101 E_ARG_MISSING: 'op' field required";
+            return false;
+        }
+
+        std::string opStr = j["op"].get<std::string>();
+
+        // Split "ns.cmd" on first dot
+        auto dotPos = opStr.find('.');
+        if (dotPos == std::string::npos) {
+            outErr = "E1003 E_COMMAND_SYNTAX: op must be namespace.command, got: " + opStr;
+            return false;
+        }
+        ns = opStr.substr(0, dotPos);
+        cmd = opStr.substr(dotPos + 1);
+
+        // All non-"op" keys become args
+        for (auto it = j.begin(); it != j.end(); ++it) {
+            if (it.key() == "op") continue;
+            args.emplace(it.key(), toXScalar(it.value()));
+        }
 
         return true;
     }
 
+    // Helper: Try to parse a line as JSON and extract the "op" field.
+    // Returns true if line is valid JSON with an "op" field, setting outOp.
+    static bool TryParseOp(const std::string& line, std::string& outOp) {
+        if (line.empty() || line[0] != '{') return false;
+        try {
+            json j = json::parse(line);
+            if (j.is_object() && j.contains("op") && j["op"].is_string()) {
+                outOp = j["op"].get<std::string>();
+                return true;
+            }
+        }
+        catch (...) {}
+        return false;
+    }
+
     CasRunner::Result CasRunner::ValidateScript(const std::vector<std::string>& lines) {
         std::vector<std::string> scopeStack; // "if", "loop", "retry"
+        bool inBlock = false;
+        std::string blockName;
+        std::string blockNonce;
 
         for (size_t i = 0; i < lines.size(); ++i) {
             std::string line = lines[i];
-            if (line.empty() || line.find_first_not_of(" \t\r\n") == std::string::npos) continue;
+            if (line.empty()) continue;
 
-            // Strict check: Must start with #
-            size_t firstChar = line.find_first_not_of(" \t\r\n");
-            if (line[firstChar] != '#') {
-                return { false, "Line " + std::to_string(i + 1) + ": Invalid syntax (must start with #)", (int)i + 1, X::Value() };
+            // Inside block-set mode: only check for end_set terminator
+            if (inBlock) {
+                std::string op;
+                if (TryParseOp(line, op) && op == "flow.end_set") {
+                    // Parse full JSON to check name/nonce match
+                    try {
+                        json j = json::parse(line);
+                        std::string eName = j.value("name", "");
+                        std::string eNonce = j.value("nonce", "");
+                        if (eName == blockName && eNonce == blockNonce) {
+                            inBlock = false;
+                            continue;
+                        }
+                    }
+                    catch (...) {}
+                }
+                // Raw text line inside block — skip validation
+                continue;
             }
 
-            // Parse Line
-            std::string ns, cmd, err;
-            std::unordered_map<std::string, X::Value> args;
-            if (!ParseLine(line.substr(firstChar), ns, cmd, args, err)) {
-                return { false, "Line " + std::to_string(i + 1) + ": " + err, (int)i + 1, X::Value() };
+            // Non-empty, non-block line: must be valid JSON
+            std::string op;
+            if (!TryParseOp(line, op)) {
+                return { false, "Line " + std::to_string(i + 1) +
+                    ": E1004 E_JSON_INVALID (must be a JSON object with 'op')", (int)i + 1, X::Value() };
             }
 
-            // Valid Command - Check Flow
-            if (ns == "flow") {
-                if (cmd == "loop_start") scopeStack.push_back("loop");
-                else if (cmd == "if") scopeStack.push_back("if");
-                else if (cmd == "retry_start") scopeStack.push_back("retry");
-                else if (cmd == "loop_end") {
-                    if (scopeStack.empty() || scopeStack.back() != "loop") 
-                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.loop_end", (int)i + 1, X::Value() };
-                    scopeStack.pop_back();
+            // Check for block-set start
+            if (op == "flow.set") {
+                try {
+                    json j = json::parse(line);
+                    if (j.contains("mode") && j["mode"].get<std::string>() == "block") {
+                        if (!j.contains("nonce") || !j["nonce"].is_string()) {
+                            return { false, "Line " + std::to_string(i + 1) +
+                                ": E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)i + 1, X::Value() };
+                        }
+                        blockName = j.value("name", "");
+                        blockNonce = j["nonce"].get<std::string>();
+                        inBlock = true;
+                        continue;
+                    }
                 }
-                else if (cmd == "retry_end") {
-                    if (scopeStack.empty() || scopeStack.back() != "retry") 
-                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.retry_end", (int)i + 1, X::Value() };
-                    scopeStack.pop_back();
-                }
-                else if (cmd == "endif") {
-                    if (scopeStack.empty() || scopeStack.back() != "if") 
-                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.endif", (int)i + 1, X::Value() };
-                    scopeStack.pop_back();
-                }
-                else if (cmd == "else") {
-                     if (scopeStack.empty() || scopeStack.back() != "if")
-                        return { false, "Line " + std::to_string(i + 1) + ": Unexpected #flow.else (not in if)", (int)i + 1, X::Value() };
-                }
+                catch (...) {}
             }
+
+            // Scope tracking for flow control
+            if (op == "flow.loop_start") scopeStack.push_back("loop");
+            else if (op == "flow.if") scopeStack.push_back("if");
+            else if (op == "flow.retry_start") scopeStack.push_back("retry");
+            else if (op == "flow.loop_end") {
+                if (scopeStack.empty() || scopeStack.back() != "loop")
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.loop_end", (int)i + 1, X::Value() };
+                scopeStack.pop_back();
+            }
+            else if (op == "flow.retry_end") {
+                if (scopeStack.empty() || scopeStack.back() != "retry")
+                    return { false, "Line " + std::to_string(i + 1) + ": E2310 Unexpected flow.retry_end", (int)i + 1, X::Value() };
+                scopeStack.pop_back();
+            }
+            else if (op == "flow.endif") {
+                if (scopeStack.empty() || scopeStack.back() != "if")
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.endif", (int)i + 1, X::Value() };
+                scopeStack.pop_back();
+            }
+            else if (op == "flow.else") {
+                 if (scopeStack.empty() || scopeStack.back() != "if")
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value() };
+            }
+        }
+
+        if (inBlock) {
+            return { false, "E2301 Unclosed block-set for variable '" + blockName + "'", (int)lines.size(), X::Value() };
         }
 
         if (!scopeStack.empty()) {
@@ -180,26 +236,28 @@ namespace CasLang {
         return { true, "", -1, X::Value() };
     }
 
+    // Helper: Extract "op" from a line by JSON parse.
+    // Returns empty string if not a valid JSON command line.
+    static std::string GetOp(const std::string& line) {
+        std::string op;
+        TryParseOp(line, op);
+        return op;
+    }
+
     // Helper: Find matching end block (supports nesting)
     // blockType: "if" or "loop" or "retry"
     size_t CasRunner::FindBlockEnd(const std::vector<std::string>& lines, size_t startLine, const std::string& blockType) {
         int depth = 1;
-        std::string startCmd = "#flow." + blockType;
-        if (blockType == "loop") startCmd = "#flow.loop_start";
-        else if (blockType == "retry") startCmd = "#flow.retry_start";
-        else startCmd = "#flow.if";
-
-        std::string endCmd = "#flow." + blockType + "_end"; 
-        if (blockType == "if") endCmd = "#flow.endif";
-        if (blockType == "loop") endCmd = "#flow.loop_end";
-        if (blockType == "retry") endCmd = "#flow.retry_end";
+        std::string startOp, endOp;
+        if (blockType == "loop") { startOp = "flow.loop_start"; endOp = "flow.loop_end"; }
+        else if (blockType == "retry") { startOp = "flow.retry_start"; endOp = "flow.retry_end"; }
+        else { startOp = "flow.if"; endOp = "flow.endif"; }
 
         for (size_t i = startLine + 1; i < lines.size(); ++i) {
-            std::string line = lines[i];
-            // Normalize line checks?
-            if (line.find(startCmd) != std::string::npos) {
+            std::string op = GetOp(lines[i]);
+            if (op == startOp) {
                 depth++;
-            } else if (line.find(endCmd) != std::string::npos) {
+            } else if (op == endOp) {
                 depth--;
                 if (depth == 0) return i;
             }
@@ -211,22 +269,18 @@ namespace CasLang {
     size_t CasRunner::FindElseOrEndif(const std::vector<std::string>& lines, size_t startLine) {
          int depth = 1;
          for (size_t i = startLine + 1; i < lines.size(); ++i) {
-            std::string line = lines[i];
-            if (line.find("#flow.if") != std::string::npos) {
+            std::string op = GetOp(lines[i]);
+            if (op == "flow.if") {
                 depth++;
-            } else if (line.find("#flow.endif") != std::string::npos) {
+            } else if (op == "flow.endif") {
                 depth--;
                 if (depth == 0) return i;
-            } else if (line.find("#flow.else") != std::string::npos) {
+            } else if (op == "flow.else") {
                 if (depth == 1) return i;
             }
         }
         return lines.size();
     }
-
-
-
-
 
     // Retry State
     struct RetryState {
@@ -239,10 +293,9 @@ namespace CasLang {
         m_ctx.break_flag = false;
         m_ctx.continue_flag = false;
         m_ctx.return_flag = false;
-        m_ctx.return_flag = false;
         m_ctx._last = X::Value();
         m_ctx.logs.clear();
-        m_ctx.externalHandler = m_externalHandler; // [NEW] Pass handler to context for Ops
+        m_ctx.externalHandler = m_externalHandler;
 
         // 1. Split into lines
         std::vector<std::string> lines;
@@ -266,12 +319,53 @@ namespace CasLang {
         std::vector<std::pair<size_t, size_t>> loopStack;
         std::vector<RetryState> retryStack;
 
+        // Block-set state
+        bool inBlock = false;
+        std::string blockVarName;
+        std::string blockNonce;
+        std::string blockAccum;
+
         // 3. PC Loop
         size_t pc = 0;
         while (pc < lines.size()) {
             m_ctx.current_line = (int)pc + 1;
             std::string line = lines[pc];
-            if (line.empty() || line[0] != '#') { pc++; continue; }
+
+            // Skip empty lines
+            if (line.empty()) { pc++; continue; }
+
+            // --- Block-set mode: collect raw text lines ---
+            if (inBlock) {
+                // Check if this line is the block terminator
+                std::string termOp;
+                if (TryParseOp(line, termOp) && termOp == "flow.end_set") {
+                    try {
+                        json j = json::parse(line);
+                        std::string eName = j.value("name", "");
+                        std::string eNonce = j.value("nonce", "");
+                        if (eName == blockVarName && eNonce == blockNonce) {
+                            // End of block — store accumulated text
+                            // Remove trailing newline if present
+                            if (!blockAccum.empty() && blockAccum.back() == '\n') {
+                                blockAccum.pop_back();
+                            }
+                            m_ctx.vars[blockVarName] = X::Value(blockAccum);
+                            inBlock = false;
+                            blockAccum.clear();
+                            pc++;
+                            continue;
+                        }
+                    }
+                    catch (...) {}
+                }
+                // Not a terminator — accumulate as raw text
+                blockAccum += line + "\n";
+                pc++;
+                continue;
+            }
+
+            // Non-JSON lines are skipped (blank lines already handled)
+            if (line[0] != '{') { pc++; continue; }
 
             std::string ns, cmd, err;
             std::unordered_map<std::string, X::Value> args;
@@ -302,10 +396,25 @@ namespace CasLang {
                                  keyName = inner.substr(1, inner.size() - 2);
                                  accessType = 1;
                              } else {
-                                 try {
-                                     listIdx = std::stoll(inner);
-                                     accessType = 2;
-                                 } catch(...) {}
+                                 // Check for variable-based index: ${varName}
+                                 if (inner.size() > 3 && inner.front() == '$' && inner[1] == '{' && inner.back() == '}') {
+                                     std::string idxVarName = inner.substr(2, inner.size() - 3);
+                                     if (m_ctx.vars.count(idxVarName)) {
+                                         X::Value idxVal = m_ctx.vars[idxVarName];
+                                         if (idxVal.isNumber()) {
+                                             listIdx = (long long)idxVal;
+                                             accessType = 2;
+                                         } else if (idxVal.isString()) {
+                                             keyName = idxVal.asString();
+                                             accessType = 1;
+                                         }
+                                     }
+                                 } else {
+                                     try {
+                                         listIdx = std::stoll(inner);
+                                         accessType = 2;
+                                     } catch(...) {}
+                                 }
                              }
                         }
 
@@ -361,10 +470,25 @@ namespace CasLang {
                                       keyName = inner.substr(1, inner.size() - 2);
                                       accessType = 1;
                                   } else {
-                                      try {
-                                          listIdx = std::stoll(inner);
-                                          accessType = 2;
-                                      } catch(...) {}
+                                      // Check for variable-based index: ${varName}
+                                      if (inner.size() > 3 && inner.front() == '$' && inner[1] == '{' && inner.back() == '}') {
+                                          std::string idxVarName = inner.substr(2, inner.size() - 3);
+                                          if (m_ctx.vars.count(idxVarName)) {
+                                              X::Value idxVal = m_ctx.vars[idxVarName];
+                                              if (idxVal.isNumber()) {
+                                                  listIdx = (long long)idxVal;
+                                                  accessType = 2;
+                                              } else if (idxVal.isString()) {
+                                                  keyName = idxVal.asString();
+                                                  accessType = 1;
+                                              }
+                                          }
+                                      } else {
+                                          try {
+                                              listIdx = std::stoll(inner);
+                                              accessType = 2;
+                                          } catch(...) {}
+                                      }
                                   }
                             }
 
@@ -405,14 +529,13 @@ namespace CasLang {
                         std::string name = args["name"].asString();
                         X::Value val = args["value"];
                         
-
                         // Check for Expression
                         if (val.isString()) {
                             std::string sVal = val.asString();
                             if (!sVal.empty() && sVal[0] == '=') {
                                 val = EvaluateExpr(sVal.substr(1));
                             }
-                            // [NEW] Parse JSON string for List/Dict
+                            // Parse JSON string for List/Dict
                             else if (sVal.size() >= 2 && (sVal.front() == '[' || sVal.front() == '{')) {
                                 // Optimization: Direct creation for empty structures
                                 if (sVal == "[]") {
@@ -436,7 +559,6 @@ namespace CasLang {
                                 }
                             }
                         }
-                        
                         
                         // Deep Copy Logic using Native API
                         if (val.IsList() || val.IsDict()) {
@@ -465,19 +587,31 @@ namespace CasLang {
                             m_ctx.vars[name] = val;
                         }
                     }
+                    // Check for block-set mode
+                    else if (args.count("name") && args.count("mode")) {
+                        std::string mode = args["mode"].asString();
+                        if (mode == "block") {
+                            if (!args.count("nonce")) {
+                                return { false, "E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)pc + 1, X::Value() };
+                            }
+                            blockVarName = args["name"].asString();
+                            blockNonce = args["nonce"].asString();
+                            inBlock = true;
+                            blockAccum.clear();
+                        }
+                    }
                 }
-                else if (cmd == "get") {
-                     if (args.count("name")) {
-                         std::string name = args["name"].asString();
-                         if (m_ctx.vars.count(name)) m_ctx._last = m_ctx.vars[name];
-                     }
+                else if (cmd == "end_set") {
+                    // This should only be reached if not in block mode (mismatched)
+                    // Block termination is handled above in the block collection loop
+                    return { false, "E2301 E_BLOCK_UNBALANCED: flow.end_set without matching block start", (int)pc + 1, X::Value() };
                 }
                 else if (cmd == "if") {
                     std::string cond = args["cond"].asString();
                     if (!EvaluateCond(cond)) {
                         size_t nextPt = FindElseOrEndif(lines, pc);
                         pc = nextPt; 
-                        if (pc < lines.size() && lines[pc].find("#flow.else") != std::string::npos) {
+                        if (pc < lines.size() && GetOp(lines[pc]) == "flow.else") {
                              pc++; continue; 
                         }
                     }
@@ -486,8 +620,9 @@ namespace CasLang {
                     size_t i = pc + 1;
                     int depth = 1; 
                     while(i < lines.size()) {
-                        if (lines[i].find("#flow.if") != std::string::npos) depth++;
-                        else if (lines[i].find("#flow.endif") != std::string::npos) {
+                        std::string op = GetOp(lines[i]);
+                        if (op == "flow.if") depth++;
+                        else if (op == "flow.endif") {
                             depth--;
                             if (depth == 0) { pc = i; break; }
                         }
@@ -511,8 +646,6 @@ namespace CasLang {
                              X::Package json(rt, "json", "");
                              listVal = json["loads"](listJson);
                          } else {
-                             // Maybe variable reference that wasn't substituted? Or simple string?
-                             // For now, assume it MUST be a JSON list
                              errMsg = "loop_start: 'in' must be a JSON list found:" + listJson;
                              isErr = true;
                          }
@@ -522,18 +655,43 @@ namespace CasLang {
                          X::List list(listVal);
                          long long size = list.Size();
                          
+                         // Handle optional 'index' variable
+                         std::string indexVarName;
+                         if (args.count("index")) {
+                             indexVarName = args["index"].asString();
+                         }
+                         
+                         // Handle optional 'from' and 'limit'
+                         long long fromIdx = 0;
+                         long long limit = -1;
+                         if (args.count("from")) {
+                             fromIdx = args["from"].isNumber() ? (long long)args["from"] : 0;
+                         }
+                         if (args.count("limit")) {
+                             limit = args["limit"].isNumber() ? (long long)args["limit"] : -1;
+                         }
+                         
                          // Check if we are re-entering (iterating)
                          if (!loopStack.empty() && loopStack.back().first == pc) {
                              // Increment
                              loopStack.back().second++;
                          } else {
-                             // New Loop
-                             loopStack.push_back({pc, 0});
+                             // New Loop — start from 'from' index
+                             loopStack.push_back({pc, (size_t)fromIdx});
                          }
 
                          long long idx = (long long)loopStack.back().second;
-                         if (idx < size) {
+                         
+                         // Check limit
+                         long long iterationsFromStart = idx - fromIdx;
+                         bool withinLimit = (limit < 0) || (iterationsFromStart < limit);
+                         
+                         if (idx < size && withinLimit) {
                              m_ctx.vars[varName] = list[idx];
+                             // Set index variable if specified
+                             if (!indexVarName.empty()) {
+                                 m_ctx.vars[indexVarName] = X::Value(idx);
+                             }
                              // Proceed to next line (body)
                          } else {
                              // Used up
@@ -541,7 +699,7 @@ namespace CasLang {
                              // Skip to end
                              size_t end = FindBlockEnd(lines, pc, "loop");
                              pc = end; 
-                             continue; // Skip the pc++ at end of loop
+                             continue;
                          }
                      } else {
                          // Not a list or error
@@ -576,8 +734,11 @@ namespace CasLang {
                 else if (cmd == "retry_start") {
                     int count = 3;
                     int delay = 1000;
-                    if (args.count("count")) count = args["count"].isNumber() ? (int)args["count"] : std::stoi(args["count"].asString());
-                    if (args.count("delay")) delay = args["delay"].isNumber() ? (int)args["delay"] : std::stoi(args["delay"].asString());
+                    // Support both old "count"/"delay" and new "times"/"backoff_ms" arg names
+                    if (args.count("times")) count = args["times"].isNumber() ? (int)args["times"] : std::stoi(args["times"].asString());
+                    else if (args.count("count")) count = args["count"].isNumber() ? (int)args["count"] : std::stoi(args["count"].asString());
+                    if (args.count("backoff_ms")) delay = args["backoff_ms"].isNumber() ? (int)args["backoff_ms"] : std::stoi(args["backoff_ms"].asString());
+                    else if (args.count("delay")) delay = args["delay"].isNumber() ? (int)args["delay"] : std::stoi(args["delay"].asString());
                     
                     retryStack.push_back({pc, count, delay});
                 }
@@ -640,7 +801,7 @@ namespace CasLang {
                 }
                 else {
                     isErr = true;
-                    errMsg = "Unknown namespace: " + ns;
+                    errMsg = "E2001 E_OP_UNKNOWN: Unknown namespace: " + ns;
                 }
             }
 
