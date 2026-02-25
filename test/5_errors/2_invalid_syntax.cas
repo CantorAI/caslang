@@ -1,2 +1,3 @@
+{"op":"caslang","version":"0.3"}
 invalid line should fail validation
-#str.print{"msg":"Should not run"}
+{"op":"str.print","msg":"Should not run"}

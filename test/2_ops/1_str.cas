@@ -1,2 +1,3 @@
-#str.upper{"s":"abc","as":"u"}
-#flow.return{"value":"${u}"}
+{"op":"caslang","version":"0.3"}
+{"op":"str.upper","s":"abc","as":"u"}
+{"op":"flow.return","value":"${u}"}

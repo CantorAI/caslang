@@ -1,3 +1,4 @@
+{"op":"caslang","version":"0.3"}
 
-#flow.if{"cond":"true"}
-#str.print{"msg":"Missing Endif"}
+{"op":"flow.if","cond":"true"}
+{"op":"str.print","msg":"Missing Endif"}

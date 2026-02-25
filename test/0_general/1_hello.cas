@@ -1,2 +1,3 @@
-#flow.set{"name":"msg","value":"hello world"}
-#flow.return{"value":"${msg}"}
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"msg","value":"hello world"}
+{"op":"flow.return","value":"${msg}"}

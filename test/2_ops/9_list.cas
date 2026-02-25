@@ -1,23 +1,24 @@
-#flow.set{"name":"results","value":{}}
-#flow.set{"name":"test_name","value":"Spec v2 List Ops"}
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 List Ops"}
 
-#flow.set{"name":"my_list","value":[]}
-#list.append{"list":"${my_list}","value":10}
-#list.append{"list":"${my_list}","value":20}
-#list.len{"list":"${my_list}","as":"l_len"}
+{"op":"flow.set","name":"my_list","value":"[]"}
+{"op":"list.append","list":"${my_list}","value":10}
+{"op":"list.append","list":"${my_list}","value":20}
+{"op":"list.len","list":"${my_list}","as":"l_len"}
 
-#flow.if{"cond":"${l_len} == 2"}
-    #dict.set{"dict":"${results}","key":"'list_len'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'list_len'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${l_len} == 2"}
+    {"op":"dict.set","dict":"${results}","key":"'list_len'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'list_len'","value":false}
+{"op":"flow.endif"}
 
-#list.range{"from":0,"to":5,"step":1,"as":"rng"}
-#list.len{"list":"${rng}","as":"rng_len"}
-#flow.if{"cond":"${rng_len} == 5"}
-    #dict.set{"dict":"${results}","key":"'list_range'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'list_range'","value":false}
-#flow.endif{}
+{"op":"list.range","from":0,"to":5,"step":1,"as":"rng"}
+{"op":"list.len","list":"${rng}","as":"rng_len"}
+{"op":"flow.if","cond":"${rng_len} == 5"}
+    {"op":"dict.set","dict":"${results}","key":"'list_range'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'list_range'","value":false}
+{"op":"flow.endif"}
 
-#flow.return{"value":"${results}"}
+{"op":"flow.return","value":"${results}"}

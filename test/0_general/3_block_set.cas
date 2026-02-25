@@ -1,0 +1,10 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"sql","mode":"block","nonce":"abc123"}
+SELECT * FROM users
+WHERE active = 1
+ORDER BY name
+{"op":"flow.end_set","name":"sql","nonce":"abc123"}
+{"op":"str.contains","s":"${sql}","sub":"SELECT","as":"has_select"}
+{"op":"str.print","msg":"Block content: ${sql}"}
+{"op":"str.print","msg":"Has SELECT: ${has_select}"}
+{"op":"flow.return","value":"${has_select}"}

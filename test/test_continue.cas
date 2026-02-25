@@ -1,25 +1,26 @@
-#flow.set{"name":"test","value":"continue"}
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"test","value":"continue"}
 
-#flow.set{"name":"l","value":"[1,2,3,4,5]"}
-#flow.set{"name":"sum","value":"0"}
-#flow.set{"name":"skipped","value":"0"}
+{"op":"flow.set","name":"l","value":"[1,2,3,4,5]"}
+{"op":"flow.set","name":"sum","value":"0"}
+{"op":"flow.set","name":"skipped","value":"0"}
 
-#flow.loop_start{"var":"x","in":"${l}"}
-    #flow.if{"cond":"${x} == 3"}
-        #flow.set{"name":"skipped","value":"=${skipped} + 1"}
-        #str.print{"msg":"Skipping 3"}
-        #flow.continue{}
-    #flow.endif{}
-    
-    #str.print{"msg":"Processing ${x}"}
-    #flow.set{"name":"sum","value":"=${sum} + ${x}"}
-#flow.loop_end{}
+{"op":"flow.loop_start","var":"x","in":"${l}"}
+    {"op":"flow.if","cond":"${x} == 3"}
+        {"op":"flow.set","name":"skipped","value":"=${skipped} + 1"}
+        {"op":"str.print","msg":"Skipping 3"}
+        {"op":"flow.continue"}
+    {"op":"flow.endif"}
 
-#str.print{"msg":"Sum: ${sum}"}
-#str.print{"msg":"Skipped: ${skipped}"}
+    {"op":"str.print","msg":"Processing ${x}"}
+    {"op":"flow.set","name":"sum","value":"=${sum} + ${x}"}
+{"op":"flow.loop_end"}
 
-#flow.if{"cond":"${sum} == 12"}
-    #str.print{"msg":"SUCCESS: Sum is 12 (1+2+4+5)"}
-#flow.else{}
-    #str.print{"msg":"FAILURE: Sum is ${sum} (expected 12)"}
-#flow.endif{}
+{"op":"str.print","msg":"Sum: ${sum}"}
+{"op":"str.print","msg":"Skipped: ${skipped}"}
+
+{"op":"flow.if","cond":"${sum} == 12"}
+    {"op":"str.print","msg":"SUCCESS: Sum is 12 (1+2+4+5)"}
+{"op":"flow.else"}
+    {"op":"str.print","msg":"FAILURE: Sum is ${sum} (expected 12)"}
+{"op":"flow.endif"}

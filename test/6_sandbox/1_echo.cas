@@ -1,7 +1,8 @@
-#sandbox.exec{"cmd":"echo hello_world","as":"output"}
-#str.contains{"s":"${output}","sub":"hello_world","as":"result"}
-#flow.if{"cond":"'${result}' == 'True'"}
-#str.print{"msg":"Echo Test OK"}
-#flow.else{}
-#str.print{"msg":"Echo Test Failed: ${output}"}
-#flow.endif{}
+{"op":"caslang","version":"0.3"}
+{"op":"sandbox.exec","cmd":"echo hello_world","as":"output"}
+{"op":"str.contains","s":"${output}","sub":"hello_world","as":"result"}
+{"op":"flow.if","cond":"'${result}' == 'True'"}
+{"op":"str.print","msg":"Echo Test OK"}
+{"op":"flow.else"}
+{"op":"str.print","msg":"Echo Test Failed: ${output}"}
+{"op":"flow.endif"}

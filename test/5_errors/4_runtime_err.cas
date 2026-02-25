@@ -1,2 +1,3 @@
-#str.print{"msg": "Valid"}
-#bad_namespace.cmd{"arg":1}
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"Valid"}
+{"op":"bad_namespace.cmd","arg":1}

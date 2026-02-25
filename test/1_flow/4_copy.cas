@@ -1,25 +1,26 @@
-#flow.set{"name":"results","value":{}}
-#flow.set{"name":"test_name","value":"Spec v2 Deep Copy"}
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 Deep Copy"}
 
-#flow.set{"name":"original","value":[]}
-#list.append{"list":"${original}","value":"A"}
+{"op":"flow.set","name":"original","value":"[]"}
+{"op":"list.append","list":"${original}","value":"A"}
 
-#flow.set{"name":"clone","value":"${original}"}
-#list.append{"list":"${clone}","value":"B"}
+{"op":"flow.set","name":"clone","value":"${original}"}
+{"op":"list.append","list":"${clone}","value":"B"}
 
-#list.len{"list":"${original}","as":"len_orig"}
-#list.len{"list":"${clone}","as":"len_clone"}
+{"op":"list.len","list":"${original}","as":"len_orig"}
+{"op":"list.len","list":"${clone}","as":"len_clone"}
 
-#flow.if{"cond":"${len_orig} == 1"}
-    #dict.set{"dict":"${results}","key":"'deep_copy_orig'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'deep_copy_orig'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${len_orig} == 1"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_orig'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_orig'","value":false}
+{"op":"flow.endif"}
 
-#flow.if{"cond":"${len_clone} == 2"}
-    #dict.set{"dict":"${results}","key":"'deep_copy_clone'","value":true}
-#flow.else{}
-    #dict.set{"dict":"${results}","key":"'deep_copy_clone'","value":false}
-#flow.endif{}
+{"op":"flow.if","cond":"${len_clone} == 2"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_clone'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_clone'","value":false}
+{"op":"flow.endif"}
 
-#flow.return{"value":"${results}"}
+{"op":"flow.return","value":"${results}"}

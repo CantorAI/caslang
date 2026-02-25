@@ -1,110 +1,143 @@
 import xlang
-import os
 import json
+import os
+import sys
 
-try:
-    print("Attempting to import caslang module...")
-    caslang_mod = xlang.importModule("caslang", fromPath="caslang")
-    print("CasLang imported successfully")
-    
-    script_dir = "D:/CantorAI/caslang/test"
-    
-    # 1. Normal Tests (Expected Success)
-    normal_tests = [
-        "0_general/1_hello.cas",
-        "0_general/2_vars.cas",
-        "1_flow/1_if.cas",
-        "1_flow/2_loop.cas",
-        "1_flow/3_retry.cas",
-        "2_ops/1_str.cas",
-        "2_ops/2_num.cas",
-        "2_ops/3_fs.cas",
-        "2_ops/4_time.cas",
-        "2_ops/6_dict.cas",
-        "2_ops/7_expr.cas",
-        "2_ops/8_str_v2.cas",
-        "2_ops/9_list.cas",
-        "2_ops/10_dict_v2.cas",
-        "2_ops/test_perf.cas",
-        "4_intensive/1_benchmark.cas",
-        "4_intensive/2_line_count.cas"
-    ]
-    
-    # Files that return a dict of { "check_name": true }
-    checkpoint_tests = [
-        "1_flow/4_copy.cas",
-        "2_ops/7_expr.cas",
-        "2_ops/8_str_v2.cas",
-        "2_ops/9_list.cas",
-        "2_ops/10_dict_v2.cas"
-    ]
-    
-    print("\n=== RUNNING NORMAL TESTS ===")
-    for rel_path in normal_tests:
-        cas_file = script_dir + "/" + rel_path
-        print(f"\n--- Running {rel_path} ---")
-        try:
-            res = caslang_mod.run(cas_file)
-            # Since res is now a Dict (JSON object), we can access it
-            # X::Value wrapper for Dict
-            if res.get("success"):
-                data = res.get('data')
-                print(f"[{rel_path}] PASSED (Data: {data})")
-                
-                # Checkpoints verification
-                if rel_path in checkpoint_tests:
-                    print("--> Verifying Checkpoints...")
-                    if isinstance(data, dict):
-                        failed_checks = []
-                        for k, v in data.items():
-                            if v is not True:
-                                failed_checks.append(f"{k}={v}")
-                        
-                        if failed_checks:
-                            print(f"[CHECKPOINT FAILURE] The following checks failed: {', '.join(failed_checks)}")
-                        else:
-                            print("[CHECKPOINT SUCCESS] All checks passed.")
-                    else:
-                        print(f"[CHECKPOINT FAILURE] Returned data is not a dict: {type(data)}")
+# Always run from the project root so xlang can find modules
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
+os.chdir(PROJECT_ROOT)
 
-                logs = res.get("logs")
-                if logs:
-                    print(f"Captured Logs: {logs}")
-            else:
-                err = res.get("error")
-                print(f"[{rel_path}] UNEXPECTED FAILURE: {err.get('message')} at line {err.get('line')}")
-        except Exception as e:
-            print(f"[{rel_path}] EXCEPTION: {e}")
+# Global counters
+g_passed = 0
+g_failed = 0
+g_total = 0
 
-    # 2. Error Tests (Expected Failure)
-    error_tests = [
-        ("5_errors/1_missing_endif.cas", "Unclosed scope: if"),
-        ("5_errors/2_invalid_syntax.cas", "Invalid syntax (must start with #)"),
-        ("5_errors/3_unclosed_loop.cas", "Unclosed scope: loop"),
-        ("5_errors/4_runtime_err.cas", "Unknown namespace: bad_namespace")
-    ]
-    
-    print("\n=== RUNNING ERROR TESTS ===")
-    for rel_path, expected_substr in error_tests:
-        cas_file = script_dir + "/" + rel_path
-        print(f"\n--- Running {rel_path} (Expected Error) ---")
-        try:
-            res = caslang_mod.run(cas_file)
-            if not res.get("success"):
-                err = res.get("error")
-                msg = err.get("message")
-                line = err.get("line")
-                if expected_substr in msg:
-                    print(f"[{rel_path}] PASSED: Correctly caught error '{msg}' at line {line}")
-                else:
-                    print(f"[{rel_path}] FAILED: Caught wrong error '{msg}', expected '{expected_substr}'")
-            else:
-                print(f"[{rel_path}] FAILED: Unexpected success")
-        except Exception as e:
-             print(f"[{rel_path}] EXCEPTION: {e}")
+# Load caslang module once
+cas = xlang.importModule("caslang", fromPath="caslang")
 
-    print("\nAll tests completed.")
+def run_cas(file_path):
+    """Run a .cas file via caslang module and return parsed result dict."""
+    abs_path = os.path.abspath(os.path.join(SCRIPT_DIR, file_path)).replace("\\", "/")
+    try:
+        res = cas.run(abs_path)
+        if isinstance(res, str):
+            try:
+                return json.loads(res)
+            except:
+                return {"raw": res}
+        elif isinstance(res, dict):
+            return res
+        else:
+            return {"raw": str(res)}
+    except Exception as e:
+        return {"success": False, "error": {"message": str(e)}}
 
-except Exception as e:
-    print(f"Failed to import caslang: {e}")
-    exit(1)
+
+def test_normal(file_path, description, check_fn=None):
+    """Run a test and check for success."""
+    global g_passed, g_failed, g_total
+    g_total += 1
+
+    result = run_cas(file_path)
+    success_flag = result.get("success", False) if isinstance(result, dict) else False
+
+    status = "PASS" if success_flag else "FAIL"
+
+    if check_fn and isinstance(result, dict):
+        if not check_fn(result):
+            status = "FAIL"
+
+    print(f"  [{status}] {description}: {file_path}")
+    if status == "FAIL":
+        print(f"    Result: {str(result)[:500]}")
+        g_failed += 1
+    else:
+        g_passed += 1
+    return status == "PASS"
+
+
+def test_error(file_path, description, expected_error_substr=None):
+    """Run a test that SHOULD fail, and optionally check error message."""
+    global g_passed, g_failed, g_total
+    g_total += 1
+
+    result = run_cas(file_path)
+    success_flag = result.get("success", True) if isinstance(result, dict) else True
+
+    if not success_flag:
+        status = "PASS"
+        if expected_error_substr and isinstance(result, dict):
+            err = result.get("error", {})
+            err_msg = err.get("message", "") if isinstance(err, dict) else str(err)
+            if expected_error_substr not in err_msg:
+                status = "FAIL"
+                print(f"    Expected error containing '{expected_error_substr}' but got: {err_msg}")
+    else:
+        status = "FAIL"
+
+    print(f"  [{status}] {description}: {file_path}")
+    if status == "FAIL":
+        print(f"    Result: {str(result)[:500]}")
+        g_failed += 1
+    else:
+        g_passed += 1
+    return status == "PASS"
+
+
+if __name__ == "__main__":
+    print(f"\n{'='*60}")
+    print(f"CasLang v0.3 JSONL Test Suite")
+    print(f"{'='*60}")
+    print(f"Test dir: {SCRIPT_DIR}\n")
+
+    # === General Tests ===
+    print("--- General ---")
+    test_normal("0_general/1_hello.cas", "Hello World")
+    test_normal("0_general/2_vars.cas", "Variable + Expression")
+    test_normal("0_general/3_block_set.cas", "Block Set Mode")
+
+    # === Flow Control ===
+    print("\n--- Flow Control ---")
+    test_normal("1_flow/1_if.cas", "If/Else")
+    test_normal("1_flow/2_loop.cas", "Loop")
+    test_normal("1_flow/3_retry.cas", "Retry")
+    test_normal("1_flow/4_copy.cas", "Deep Copy")
+
+    # === Operations ===
+    print("\n--- Operations ---")
+    test_normal("2_ops/1_str.cas", "String Upper")
+    test_normal("2_ops/2_num.cas", "Expression (was num.add)")
+    test_normal("2_ops/3_fs.cas", "File System")
+    test_normal("2_ops/4_time.cas", "Time")
+    test_normal("2_ops/6_dict.cas", "Dict stat + bracket access")
+    test_normal("2_ops/7_expr.cas", "Expressions")
+    test_normal("2_ops/8_str_v2.cas", "String Count")
+    test_normal("2_ops/9_list.cas", "List Ops")
+    test_normal("2_ops/10_dict_v2.cas", "Dict Ops")
+
+    # === Intensive ===
+    print("\n--- Intensive ---")
+    test_normal("4_intensive/1_benchmark.cas", "Benchmark")
+
+    # === Error Tests ===
+    print("\n--- Error Cases ---")
+    test_error("5_errors/1_missing_endif.cas", "Missing Endif", "Unclosed scope: if")
+    test_error("5_errors/2_invalid_syntax.cas", "Invalid Syntax", "E1004 E_JSON_INVALID")
+    test_error("5_errors/3_unclosed_loop.cas", "Unclosed Loop", "Unclosed scope: loop")
+    test_error("5_errors/4_runtime_err.cas", "Unknown Namespace", "E2001 E_OP_UNKNOWN")
+
+    # === Root-level Tests ===
+    print("\n--- Root-level ---")
+    test_normal("test.cas", "Basic test")
+    test_normal("test_continue.cas", "Continue flow")
+    test_normal("test_sandbox.cas", "Sandbox exec")
+    test_normal("test_stat.cas", "File stat")
+    test_normal("comprehensive_v2.cas", "Comprehensive v2")
+
+    # === Summary ===
+    print(f"\n{'='*60}")
+    print(f"Results: {g_passed}/{g_total} passed, {g_failed} failed")
+    print(f"{'='*60}")
+
+    sys.exit(0 if g_failed == 0 else 1)
