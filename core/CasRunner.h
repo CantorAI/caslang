@@ -27,6 +27,7 @@ namespace CasLang {
         
         // using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
         void SetExternalHandler(ExternalHandler handler) { m_externalHandler = handler; }
+        void SetMetaData(const std::string& md) { m_ctx.metaData = md; }
 
         struct Result {
             bool success;

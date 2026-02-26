@@ -6,11 +6,12 @@
 #include "xlang.h"
 
 namespace CasLang {
-    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, const std::string& metaData)>;
 
     struct CasContext {
         std::unordered_map<std::string, X::Value> vars;
         X::Value _last;
+        std::string metaData;
         
         // Flow control flags
         bool break_flag = false;

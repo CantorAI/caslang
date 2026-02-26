@@ -90,12 +90,12 @@ namespace CasLang
 		}
         
     private:
-        bool ParseInputFrame(X::Value& frame, unsigned long long& feedbackId, X::Value& payload);
+        bool ParseInputFrame(X::Value& frame, unsigned long long& feedbackId, X::Value& payload, std::string& metaData);
         bool ExtractToolCall(X::Value& payload, std::string& toolName, std::string& callId, X::Dict& args);
-        void ProcessRunCall(const std::string& script, const std::string& callId, unsigned long long feedbackId);
+        void ProcessRunCall(const std::string& script, const std::string& callId, unsigned long long feedbackId, const std::string& metaData);
         void ProcessGetCapsCall(const std::string& callId, unsigned long long feedbackId);
 
-        X::Value ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId);
-        void SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args);
+        X::Value ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId, const std::string& metaData);
+        void SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args, const std::string& metaData);
 	};
 }

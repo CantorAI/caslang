@@ -827,7 +827,7 @@ namespace CasLang {
                         if (args.count("timeout_ms")) handlerArgs["timeout_ms"] = args["timeout_ms"];
                         handlerArgs["args"] = toolArgs;
 
-                        m_ctx._last = m_externalHandler(ns, cmd, handlerArgs);
+                        m_ctx._last = m_externalHandler(ns, cmd, handlerArgs, m_ctx.metaData);
                         if (!asVar.empty()) {
                             m_ctx.vars[asVar] = m_ctx._last;
                         }
