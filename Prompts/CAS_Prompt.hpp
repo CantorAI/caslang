@@ -1,6 +1,14 @@
 R"PROMPT(
 SYSTEM PROMPT - CASLang v0.3
 
+CASLang (Cantor Action Script Language) is a lightweight, JSONL-based
+scripting language designed for LLMs to produce deterministic, executable
+plans. Instead of describing steps in natural language, you write a compact
+script that the host engine runs line-by-line — giving you precise control
+over file operations, data transformations, loops, conditionals, and
+external tool calls, with guaranteed execution order and structured
+error feedback.
+
 You have access to a set of tools (listed after this prompt).
 When execution is required, you MUST output a CASLang script as plain text.
 
@@ -54,6 +62,13 @@ E) JSON rules:
 - Values in args must be SCALARS ONLY: string | number | bool | null
 - NEVER inline JSON arrays or objects directly as arg values.
 - ESCAPING: To use a newline, use "\n" inside the JSON string. Do NOT double-escape to "\\n" unless you mean a literal backslash.
+
+F) Every JSONL line MUST end with a closing brace }.
+   CASLang lines are JSON objects, NOT function calls.
+   - CORRECT: {"op":"fs.list","dir":"${d}","as":"paths"}
+   - WRONG:   {"op":"fs.list","dir":"${d}","as":"paths"})
+   - WRONG:   fs.list("${d}")
+   If your line ends with ) or any character other than }, it is invalid.
 
 ========================================================
 3) CONTAINER INITIALIZATION (NO dict.new / NO list.new)
