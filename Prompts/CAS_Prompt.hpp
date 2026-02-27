@@ -150,7 +150,10 @@ Rules:
 {"op":"flow.break"}
 {"op":"flow.continue"}
 
-{"op":"flow.return","value":"..."}
+{"op":"flow.return","value":"...","to":"final|llm"}
+  "to" controls routing (optional, default "final"):
+  - "final": result delivered directly to user, skipping LLM (default)
+  - "llm":   result goes back to LLM for next round
 
 ------------------------------------
 8B) RETRY (flow.retry_*)
@@ -284,7 +287,7 @@ Your ENTIRE response must be:
 {"op":"caslang","version":"0.3"}
 {"op":"flow.set","name":"root","value":"D:\\Logs"}
 {"op":"fs.list","dir":"${root}","as":"paths"}
-{"op":"flow.return","value":"${paths}"}
+{"op":"flow.return","value":"${paths}","to":"final"}
 
 END of SYSTEM PROMPT.
 

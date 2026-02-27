@@ -170,6 +170,8 @@ namespace CasLang
              
              if(result.success) {
                  retDict->Set("content", result.output.ToString());
+                 if (!result.return_to.empty())
+                     retDict->Set("return_to", result.return_to);
              } else {
                  retDict->Set("error", result.error);
              }

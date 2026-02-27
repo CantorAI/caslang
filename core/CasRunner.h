@@ -34,6 +34,7 @@ namespace CasLang {
             std::string error; // Last error
             int errorLine = -1;
             X::Value output;   // Final output
+            std::string return_to;  // "llm" (default) or "final"
         };
 
         Result Run(const std::string& script);

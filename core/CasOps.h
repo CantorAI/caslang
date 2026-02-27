@@ -18,6 +18,7 @@ namespace CasLang {
         bool continue_flag = false;
         bool return_flag = false;
         X::Value return_value;
+        std::string return_to;  // "llm" (default) or "final"
 
         // Recursion/Loop limits could go here
         
