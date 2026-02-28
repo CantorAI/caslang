@@ -358,6 +358,23 @@ namespace CasLang {
                             if (!blockAccum.empty() && blockAccum.back() == '\n') {
                                 blockAccum.pop_back();
                             }
+                            // Unescape literal \n sequences to real newlines.
+                            // Handles the case where the LLM produces literal
+                            // "\n" (two chars) instead of real newlines.
+                            {
+                                std::string unescaped;
+                                unescaped.reserve(blockAccum.size());
+                                for (size_t ci = 0; ci < blockAccum.size(); ++ci) {
+                                    if (blockAccum[ci] == '\\' && ci + 1 < blockAccum.size()) {
+                                        char next = blockAccum[ci + 1];
+                                        if (next == 'n')  { unescaped += '\n'; ++ci; continue; }
+                                        if (next == 't')  { unescaped += '\t'; ++ci; continue; }
+                                        if (next == '\\') { unescaped += '\\'; ++ci; continue; }
+                                    }
+                                    unescaped += blockAccum[ci];
+                                }
+                                blockAccum = std::move(unescaped);
+                            }
                             m_ctx.vars[blockVarName] = X::Value(blockAccum);
                             inBlock = false;
                             blockAccum.clear();
