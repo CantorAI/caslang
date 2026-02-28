@@ -6,17 +6,19 @@
 #include "xlang.h"
 
 namespace CasLang {
-    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, const std::string& metaData)>;
 
     struct CasContext {
         std::unordered_map<std::string, X::Value> vars;
         X::Value _last;
+        std::string metaData;
         
         // Flow control flags
         bool break_flag = false;
         bool continue_flag = false;
         bool return_flag = false;
         X::Value return_value;
+        std::string return_to;  // "llm" (default) or "final"
 
         // Recursion/Loop limits could go here
         

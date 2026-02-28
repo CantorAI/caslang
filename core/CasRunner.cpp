@@ -187,7 +187,7 @@ namespace CasLang {
             std::string op;
             if (!TryParseOp(line, op)) {
                 return { false, "Line " + std::to_string(i + 1) +
-                    ": E1004 E_JSON_INVALID (must be a JSON object with 'op')", (int)i + 1, X::Value() };
+                    ": E1004 E_JSON_INVALID (must be a JSON object with 'op')", (int)i + 1, X::Value(), "final" };
             }
 
             // Check for block-set start
@@ -197,7 +197,7 @@ namespace CasLang {
                     if (j.contains("mode") && j["mode"].get<std::string>() == "block") {
                         if (!j.contains("nonce") || !j["nonce"].is_string()) {
                             return { false, "Line " + std::to_string(i + 1) +
-                                ": E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)i + 1, X::Value() };
+                                ": E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)i + 1, X::Value(), "final" };
                         }
                         blockName = j.value("name", "");
                         blockNonce = j["nonce"].get<std::string>();
@@ -214,34 +214,34 @@ namespace CasLang {
             else if (op == "flow.retry_start") scopeStack.push_back("retry");
             else if (op == "flow.loop_end") {
                 if (scopeStack.empty() || scopeStack.back() != "loop")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.loop_end", (int)i + 1, X::Value() };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.loop_end", (int)i + 1, X::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.retry_end") {
                 if (scopeStack.empty() || scopeStack.back() != "retry")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2310 Unexpected flow.retry_end", (int)i + 1, X::Value() };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2310 Unexpected flow.retry_end", (int)i + 1, X::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.endif") {
                 if (scopeStack.empty() || scopeStack.back() != "if")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.endif", (int)i + 1, X::Value() };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.endif", (int)i + 1, X::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.else") {
                  if (scopeStack.empty() || scopeStack.back() != "if")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value() };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value(), "final" };
             }
         }
 
         if (inBlock) {
-            return { false, "E2301 Unclosed block-set for variable '" + blockName + "'", (int)lines.size(), X::Value() };
+            return { false, "E2301 Unclosed block-set for variable '" + blockName + "'", (int)lines.size(), X::Value(), "final" };
         }
 
         if (!scopeStack.empty()) {
-            return { false, "Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value() };
+            return { false, "Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
         }
 
-        return { true, "", -1, X::Value() };
+        return { true, "", -1, X::Value(), "final" };
     }
 
     // Helper: Extract "op" from a line by JSON parse.
@@ -301,6 +301,7 @@ namespace CasLang {
         m_ctx.break_flag = false;
         m_ctx.continue_flag = false;
         m_ctx.return_flag = false;
+        m_ctx.return_to = "final";
         m_ctx._last = X::Value();
         m_ctx.logs.clear();
         m_ctx.externalHandler = m_externalHandler;
@@ -357,6 +358,23 @@ namespace CasLang {
                             if (!blockAccum.empty() && blockAccum.back() == '\n') {
                                 blockAccum.pop_back();
                             }
+                            // Unescape literal \n sequences to real newlines.
+                            // Handles the case where the LLM produces literal
+                            // "\n" (two chars) instead of real newlines.
+                            {
+                                std::string unescaped;
+                                unescaped.reserve(blockAccum.size());
+                                for (size_t ci = 0; ci < blockAccum.size(); ++ci) {
+                                    if (blockAccum[ci] == '\\' && ci + 1 < blockAccum.size()) {
+                                        char next = blockAccum[ci + 1];
+                                        if (next == 'n')  { unescaped += '\n'; ++ci; continue; }
+                                        if (next == 't')  { unescaped += '\t'; ++ci; continue; }
+                                        if (next == '\\') { unescaped += '\\'; ++ci; continue; }
+                                    }
+                                    unescaped += blockAccum[ci];
+                                }
+                                blockAccum = std::move(unescaped);
+                            }
                             m_ctx.vars[blockVarName] = X::Value(blockAccum);
                             inBlock = false;
                             blockAccum.clear();
@@ -379,7 +397,7 @@ namespace CasLang {
             std::unordered_map<std::string, X::Value> args;
             if (!ParseLine(line, ns, cmd, args, err)) {
                  // Should be caught by validation, but just in case
-                 return { false, "Runtime Parsing Error: " + err, (int)pc + 1, X::Value() };
+                 return { false, "Runtime Parsing Error: " + err, (int)pc + 1, X::Value(), "final" };
             }
 
             // Substitute variables in args
@@ -428,21 +446,21 @@ namespace CasLang {
 
                         if (accessType > 0) {
                             if (!m_ctx.vars.count(varName)) {
-                                return { false, "E2201 E_VAR_UNDEFINED: " + varName, (int)pc + 1, X::Value() };
+                                return { false, "E2201 E_VAR_UNDEFINED: " + varName, (int)pc + 1, X::Value(), "final" };
                             }
                             X::Value base = m_ctx.vars[varName];
                             
                             if (accessType == 1) { // Dict
-                                if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, X::Value() };
+                                if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, X::Value(), "final" };
                                 X::Dict d(base);
                                 if (d->Has(keyName.c_str())) { kv.second = d[keyName.c_str()]; continue; }
-                                else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, X::Value() };
+                                else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, X::Value(), "final" };
                             }
                             else if (accessType == 2) { // List
-                                if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, X::Value() };
+                                if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, X::Value(), "final" };
                                 X::List l(base);
                                 if (listIdx >= 0 && listIdx < l.Size()) { kv.second = l[(int)listIdx]; continue; }
-                                else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, X::Value() };
+                                else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, X::Value(), "final" };
                             }
                         }
                         else {
@@ -507,12 +525,12 @@ namespace CasLang {
                                      if (accessType == 1 && base.IsDict()) {
                                          X::Dict d(base);
                                          if (d->Has(keyName.c_str())) valStr = d[keyName.c_str()].ToString();
-                                         else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, X::Value() };
+                                          else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, X::Value(), "final" };
                                      }
                                      else if (accessType == 2 && base.IsList()) {
                                          X::List l(base);
                                          if (listIdx >= 0 && listIdx < l.Size()) valStr = l[(int)listIdx].ToString();
-                                         else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, X::Value() };
+                                          else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, X::Value(), "final" };
                                      }
                                  }
                             }
@@ -604,7 +622,7 @@ namespace CasLang {
                         std::string mode = args["mode"].asString();
                         if (mode == "block") {
                             if (!args.count("nonce")) {
-                                return { false, "E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)pc + 1, X::Value() };
+                                return { false, "E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)pc + 1, X::Value(), "final" };
                             }
                             blockVarName = args["name"].asString();
                             blockNonce = args["nonce"].asString();
@@ -616,7 +634,7 @@ namespace CasLang {
                 else if (cmd == "end_set") {
                     // This should only be reached if not in block mode (mismatched)
                     // Block termination is handled above in the block collection loop
-                    return { false, "E2301 E_BLOCK_UNBALANCED: flow.end_set without matching block start", (int)pc + 1, X::Value() };
+                    return { false, "E2301 E_BLOCK_UNBALANCED: flow.end_set without matching block start", (int)pc + 1, X::Value(), "final" };
                 }
                 else if (cmd == "if") {
                     std::string cond = args["cond"].asString();
@@ -763,7 +781,8 @@ namespace CasLang {
                     if (args.count("value")) m_ctx.return_value = args["value"];
                     else m_ctx.return_value = m_ctx._last;
                     m_ctx.return_flag = true;
-                    return { true, "", -1, m_ctx.return_value };
+                    m_ctx.return_to = args.count("to") ? args["to"].asString() : "final";
+                    return { true, "", -1, m_ctx.return_value, m_ctx.return_to };
                 }
             }
             else {
@@ -782,7 +801,7 @@ namespace CasLang {
                         if (args.count("return") && args["return"].IsTrue()) {
                              m_ctx.return_value = m_ctx._last;
                              m_ctx.return_flag = true;
-                             return { true, "", -1, m_ctx._last };
+                             return { true, "", -1, m_ctx._last, "final" };
                         }
                     }
                     catch (const std::exception& e) {
@@ -827,7 +846,7 @@ namespace CasLang {
                         if (args.count("timeout_ms")) handlerArgs["timeout_ms"] = args["timeout_ms"];
                         handlerArgs["args"] = toolArgs;
 
-                        m_ctx._last = m_externalHandler(ns, cmd, handlerArgs);
+                        m_ctx._last = m_externalHandler(ns, cmd, handlerArgs, m_ctx.metaData);
                         if (!asVar.empty()) {
                             m_ctx.vars[asVar] = m_ctx._last;
                         }
@@ -860,18 +879,18 @@ namespace CasLang {
                     }
                     else {
                         LogError(errMsg + " (Retry exhausted)");
-                        return { false, errMsg, (int)pc + 1, X::Value() };
+                        return { false, errMsg, (int)pc + 1, X::Value(), "final" };
                     }
                 }
                 else {
                     LogError(errMsg);
-                    return { false, errMsg, (int)pc + 1, X::Value() };
+                    return { false, errMsg, (int)pc + 1, X::Value(), "final" };
                 }
             }
 
             pc++;
         }
         
-        return { true, "", -1, m_ctx._last };
+        return { true, "", -1, m_ctx._last, m_ctx.return_to };
     }
 }

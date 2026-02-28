@@ -19,7 +19,7 @@ namespace CasLang {
             if (command == "call") {
                 if (ctx.externalHandler) {
                     // Forward to external handler (e.g. host)
-                    return ctx.externalHandler("tool", "call", args);
+                    return ctx.externalHandler("tool", "call", args, ctx.metaData);
                 } else {
                     errs.push_back("E5001 E_NO_HANDLER: No external handler for tool.call");
                     return X::Value();

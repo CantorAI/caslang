@@ -62,51 +62,52 @@ namespace CasLang
     }
 
     bool CasFilter::onPinPutFrame(IPin* pin, X::Value& frame)
+{
+    if (pin->GetDirection() != PinDirection::Input) return false;
+    m_stats.OneTime();
+
+    unsigned long long feedbackId = 0;
+    X::Value payload;
+    std::string metaData;
+    if (!ParseInputFrame(frame, feedbackId, payload, metaData)) return false;
+
+    std::string toolName, callId;
+    X::Dict args;
+    if (ExtractToolCall(payload, toolName, callId, args))
     {
-        if (pin->GetDirection() != PinDirection::Input) return false;
-        m_stats.OneTime();
-
-        unsigned long long feedbackId = 0;
-        X::Value payload;
-        if (!ParseInputFrame(frame, feedbackId, payload)) return false;
-
-        std::string toolName, callId;
-        X::Dict args;
-        if (ExtractToolCall(payload, toolName, callId, args))
+        if (toolName == "caslang.run")
         {
-            if (toolName == "caslang.run")
+            std::string script = args["script"].ToString();
+            std::cout << "--------------------------------------------------" << std::endl;
+            std::cout << "CasLang Script execution:" << std::endl;
+            std::cout << script << std::endl;
+            std::cout << "--------------------------------------------------" << std::endl;
+            if (!script.empty())
             {
-                std::string script = args["script"].ToString();
-                std::cout << "--------------------------------------------------" << std::endl;
-                std::cout << "CasLang Script execution:" << std::endl;
-                std::cout << script << std::endl;
-                std::cout << "--------------------------------------------------" << std::endl;
-                if (!script.empty())
-                {
-                    ProcessRunCall(script, callId, feedbackId);
-                    return true;
-                }
-            }
-            else if (toolName == "caslang.getcaps")
-            {
-                ProcessGetCapsCall(callId, feedbackId);
+                ProcessRunCall(script, callId, feedbackId, metaData);
                 return true;
             }
         }
-
-        // Pass-through
-        Deliver(frame);
-        m_fps = m_stats.GetFPS();
-        return true;
+        else if (toolName == "caslang.getcaps")
+        {
+            ProcessGetCapsCall(callId, feedbackId);
+            return true;
+        }
     }
 
-    bool CasFilter::ParseInputFrame(X::Value& frame, unsigned long long& feedbackId, X::Value& payload)
-    {
-        X::XPackageValue<GalaxyFrame> valFrm(frame);
-        GalaxyFrame& inputFrame = *valFrm.GetRealObj();
-        
-        feedbackId = inputFrame.Head()->format[0];
-        auto dataFmt = (GalaxyDataFormat)inputFrame.Head()->format[FMT_NUM - 1];
+    // Pass-through
+    Deliver(frame);
+    m_fps = m_stats.GetFPS();
+    return true;
+}
+    bool CasFilter::ParseInputFrame(X::Value& frame, unsigned long long& feedbackId, X::Value& payload, std::string& metaData)
+{
+    X::XPackageValue<GalaxyFrame> valFrm(frame);
+    GalaxyFrame& inputFrame = *valFrm.GetRealObj();
+    
+    feedbackId = inputFrame.Head()->format[0];
+    auto dataFmt = (GalaxyDataFormat)inputFrame.Head()->format[FMT_NUM - 1];
+    metaData.assign(inputFrame.MetaData(), inputFrame.Head()->meta_dataSize);
 
         if(dataFmt == GalaxyDataFormat::AsRawData)
         {
@@ -150,12 +151,13 @@ namespace CasLang
         return true;
     }
 
-    void CasFilter::ProcessRunCall(const std::string& script, const std::string& callId, unsigned long long feedbackId)
-    {
-        // Setup External Handler
-        m_CasRunner.SetExternalHandler([this, feedbackId](const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args){
-             return this->ExecuteExternalTool(ns, cmd, args, feedbackId);
-        });
+    void CasFilter::ProcessRunCall(const std::string& script, const std::string& callId, unsigned long long feedbackId, const std::string& metaData)
+{
+    // Setup External Handler
+    m_CasRunner.SetExternalHandler([this, feedbackId, metaData](const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, const std::string& /*handlerMeta*/){
+         return this->ExecuteExternalTool(ns, cmd, args, feedbackId, metaData);
+    });
+    m_CasRunner.SetMetaData(metaData);
 
         auto result = m_CasRunner.Run(script);
         
@@ -168,6 +170,8 @@ namespace CasLang
              
              if(result.success) {
                  retDict->Set("content", result.output.ToString());
+                 if (!result.return_to.empty())
+                     retDict->Set("return_to", result.return_to);
              } else {
                  retDict->Set("error", result.error);
              }
@@ -196,7 +200,7 @@ namespace CasLang
         
         // 2. Query Downstream (Action) Caps
         std::unordered_map<std::string, X::Value> args; // empty
-        X::Value actionCapsVal = ExecuteExternalTool("action", "getcaps", args, feedbackId);
+        X::Value actionCapsVal = ExecuteExternalTool("action", "getcaps", args, feedbackId, "");
         
         // actionCapsVal should be the JSON string of the registry/tools
         if(actionCapsVal.IsValid() && actionCapsVal.IsString())
@@ -239,28 +243,28 @@ namespace CasLang
         IssueFeedback(feedbackId, retList);
     }
 
-    X::Value CasFilter::ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId)
+    X::Value CasFilter::ExecuteExternalTool(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, unsigned long long originalFeedbackId, const std::string& metaData)
+{
+    std::string strToolCallName = args["name"].ToString();
+    int timeout_ms = args["timeout_ms"].ToInt();
+    X::Value toolcallArgs = args["args"];
+
+    X::Dict d; 
+    unsigned long long internalId = (unsigned long long)this + getCurMilliTimeStamp() + (unsigned long long)&d;
+    d->Set("internal_id", internalId);
+    X::Value stateDict=d;
+
+    unsigned long long reqId = RegisterFeedback(stateDict);
+    
+    std::promise<X::Value> prom;
+    auto fut = prom.get_future();
+    
     {
-        std::string strToolCallName = args["name"].ToString();
-        int timeout_ms = args["timeout_ms"].ToInt();
-        X::Value toolcallArgs = args["args"];
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_pendingRequests[internalId] = &prom; // Map Internal ID
+    }
 
-        X::Dict d; 
-        unsigned long long internalId = (unsigned long long)this + getCurMilliTimeStamp() + (unsigned long long)&d;
-        d->Set("internal_id", internalId);
-        X::Value stateDict=d;
-
-        unsigned long long reqId = RegisterFeedback(stateDict);
-        
-        std::promise<X::Value> prom;
-        auto fut = prom.get_future();
-        
-        {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            m_pendingRequests[internalId] = &prom; // Map Internal ID
-        }
-
-        SendToolCall(reqId, strToolCallName, toolcallArgs);
+    SendToolCall(reqId, strToolCallName, toolcallArgs, metaData);
 
         // Wait with simple timeout safety (e.g. 60 sec) or infinite?
         // Agent tools can take time. Infinite for now.
@@ -270,41 +274,45 @@ namespace CasLang
         return result;
     }
 
-    void CasFilter::SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args)
+    void CasFilter::SendToolCall(unsigned long long reqId, const std::string& cmd, X::Value& args, const std::string& metaData)
+{
+     X::Dict callObj;
+     callObj->Set("name", cmd);
+     
+     callObj->Set("args", args);
+     callObj->Set("id", std::to_string(reqId));
+     
+     X::List calls;
+     calls += callObj;
+     
+     auto varOutFrm = m_pFactory->NewDataFrame();
+     X::XPackage* pPack = dynamic_cast<X::XPackage*>(varOutFrm.GetObj());
+     GalaxyFrame* pOutFrm = (GalaxyFrame*)pPack->GetEmbedObj();
+     
+     pOutFrm->Head()->startTime = getCurMilliTimeStamp();
+     
+     X::XLStream* pStream = X::g_pXHost->CreateStream();
+     calls.ToBytes(pStream);
+     int size = (int)pStream->Size();
+     
+     pOutFrm->Head()->dataSize = size;
+     pOutFrm->Head()->meta_dataSize = (int)metaData.size();
+     pOutFrm->Head()->format[0] = reqId; 
+     pOutFrm->Head()->format[FMT_NUM - 1] = (unsigned long long)GalaxyDataFormat::AsXValue; 
+     
+     char* pBuf = pOutFrm->AllocMemory();
+     if (!metaData.empty()) {
+         memcpy(pOutFrm->MetaData(), metaData.data(), metaData.size());
+     }
+     pStream->FullCopyTo(pBuf, size);
+     X::g_pXHost->ReleaseStream(pStream);
+     
+    for (const auto& p : *m_outputList)
     {
-         X::Dict callObj;
-         callObj->Set("name", cmd);
-         
-         callObj->Set("args", args);
-         callObj->Set("id", std::to_string(reqId));
-         
-         X::List calls;
-         calls += callObj;
-         
-         auto varOutFrm = m_pFactory->NewDataFrame();
-         X::XPackage* pPack = dynamic_cast<X::XPackage*>(varOutFrm.GetObj());
-         GalaxyFrame* pOutFrm = (GalaxyFrame*)pPack->GetEmbedObj();
-         
-         pOutFrm->Head()->startTime = getCurMilliTimeStamp();
-         
-         X::XLStream* pStream = X::g_pXHost->CreateStream();
-         calls.ToBytes(pStream);
-         int size = (int)pStream->Size();
-         
-         pOutFrm->Head()->dataSize = size;
-         pOutFrm->Head()->format[0] = reqId; 
-         pOutFrm->Head()->format[FMT_NUM - 1] = (unsigned long long)GalaxyDataFormat::AsXValue; 
-         
-         char* pBuf = pOutFrm->AllocMemory();
-         pStream->FullCopyTo(pBuf, size);
-         X::g_pXHost->ReleaseStream(pStream);
-         
-        for (const auto& p : *m_outputList)
-        {
-            X::XPackageValue<Pin> varPin(p);
-            Pin& pin = *varPin;
-            pin.Put(varOutFrm);
-        }
+        X::XPackageValue<Pin> varPin(p);
+        Pin& pin = *varPin;
+        pin.Put(varOutFrm);
+    }
     }
 
     void CasFilter::OnFeedback(X::Value stateValue, X::Value feedbackValue)
