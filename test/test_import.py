@@ -103,12 +103,14 @@ if __name__ == "__main__":
     test_normal("1_flow/2_loop.cas", "Loop")
     test_normal("1_flow/3_retry.cas", "Retry")
     test_normal("1_flow/4_copy.cas", "Deep Copy")
+    test_normal("1_flow/5_early_return.cas", "Early Return", lambda r: r.get("data") == 30)
 
     # === Operations ===
     print("\n--- Operations ---")
     test_normal("2_ops/1_str.cas", "String Upper")
     test_normal("2_ops/2_num.cas", "Expression (was num.add)")
     test_normal("2_ops/3_fs.cas", "File System")
+    test_normal("2_ops/3_fs_search.cas", "FS Search (user script)")
     test_normal("2_ops/4_time.cas", "Time")
     test_normal("2_ops/6_dict.cas", "Dict stat + bracket access")
     test_normal("2_ops/7_expr.cas", "Expressions")

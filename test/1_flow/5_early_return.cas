@@ -1,0 +1,14 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[Checkpoint 1] Starting early return test"}
+
+{"op":"flow.set","name":"items","value":"[10,20,30,40,50]"}
+{"op":"flow.loop_start","var":"x","in":"${items}","index":"i"}
+    {"op":"str.print","msg":"[Loop] i=${i} x=${x}"}
+    {"op":"flow.if","cond":"${x} == 30"}
+        {"op":"str.print","msg":"[Checkpoint 2] Found 30, returning early"}
+        {"op":"flow.return","value":"${x}"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+
+{"op":"str.print","msg":"[FAIL] Should not reach here"}
+{"op":"flow.return","value":"error"}
