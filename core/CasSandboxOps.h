@@ -3,6 +3,8 @@
 #include <iostream>
 #include <fstream>
 #include <cstdio>
+#include <random>
+#include <regex>
 
 namespace CasLang {
     class CasSandboxOps : public CasOps {
@@ -35,33 +37,61 @@ namespace CasLang {
                 bool useTempFile = false;
 
                 if (cmdLine.find('\n') != std::string::npos) {
-                    // Extract the script body from "python -c \"...\""
-                    // or just treat the whole thing as a script
                     std::string scriptBody;
-                    
-                    // Check for pattern: python -c "..."
-                    auto pyPos = cmdLine.find("python");
-                    auto cPos = cmdLine.find("-c");
-                    if (pyPos != std::string::npos && cPos != std::string::npos && cPos > pyPos) {
-                        // Extract everything after -c, stripping surrounding quotes
-                        size_t scriptStart = cPos + 2;
-                        while (scriptStart < cmdLine.size() && (cmdLine[scriptStart] == ' ' || cmdLine[scriptStart] == '"'))
-                            scriptStart++;
-                        size_t scriptEnd = cmdLine.size();
-                        while (scriptEnd > scriptStart && (cmdLine[scriptEnd - 1] == '"' || cmdLine[scriptEnd - 1] == ' '))
-                            scriptEnd--;
-                        scriptBody = cmdLine.substr(scriptStart, scriptEnd - scriptStart);
-                    } else {
-                        scriptBody = cmdLine;
+
+                    // Pattern 1: Heredoc  python - <<'DELIM' ... DELIM
+                    //   or  python - <<"DELIM" ... DELIM
+                    std::regex heredocRe(R"(python\s+-\s*<<\s*['"]?(\w+)['"]?)");
+                    std::smatch m;
+                    if (std::regex_search(cmdLine, m, heredocRe)) {
+                        std::string delim = m[1].str();
+                        // Find the end of the first line (after the heredoc header)
+                        size_t bodyStart = cmdLine.find('\n', m.position()) + 1;
+                        // Find the delimiter line at end
+                        size_t bodyEnd = cmdLine.rfind(delim);
+                        // Walk back to start of that line
+                        if (bodyEnd != std::string::npos && bodyEnd > bodyStart) {
+                            size_t lineStart = cmdLine.rfind('\n', bodyEnd - 1);
+                            if (lineStart != std::string::npos && lineStart >= bodyStart - 1) {
+                                bodyEnd = lineStart;
+                            }
+                        }
+                        if (bodyStart < cmdLine.size() && bodyEnd > bodyStart) {
+                            scriptBody = cmdLine.substr(bodyStart, bodyEnd - bodyStart);
+                            // Trim trailing whitespace/newlines
+                            while (!scriptBody.empty() && (scriptBody.back() == '\n' || scriptBody.back() == '\r'))
+                                scriptBody.pop_back();
+                        } else {
+                            scriptBody = cmdLine;
+                        }
+                    }
+                    // Pattern 2: python -c "..."
+                    else {
+                        auto pyPos = cmdLine.find("python");
+                        auto cPos = cmdLine.find("-c");
+                        if (pyPos != std::string::npos && cPos != std::string::npos && cPos > pyPos) {
+                            size_t scriptStart = cPos + 2;
+                            while (scriptStart < cmdLine.size() && (cmdLine[scriptStart] == ' ' || cmdLine[scriptStart] == '"'))
+                                scriptStart++;
+                            size_t scriptEnd = cmdLine.size();
+                            while (scriptEnd > scriptStart && (cmdLine[scriptEnd - 1] == '"' || cmdLine[scriptEnd - 1] == ' '))
+                                scriptEnd--;
+                            scriptBody = cmdLine.substr(scriptStart, scriptEnd - scriptStart);
+                        } else {
+                            // Pattern 3: raw script body
+                            scriptBody = cmdLine;
+                        }
                     }
 
-                    // Write to temp file
+                    // Generate unique temp file name with random suffix
+                    std::random_device rd;
+                    unsigned int rnd = rd();
 #if defined(_WIN32) || defined(WIN32)
                     char tmpDir[MAX_PATH];
                     GetTempPathA(MAX_PATH, tmpDir);
-                    tempPath = std::string(tmpDir) + "caslang_sandbox.py";
+                    tempPath = std::string(tmpDir) + "caslang_sandbox_" + std::to_string(rnd) + ".py";
 #else
-                    tempPath = "/tmp/caslang_sandbox.py";
+                    tempPath = "/tmp/caslang_sandbox_" + std::to_string(rnd) + ".py";
 #endif
                     {
                         std::ofstream ofs(tempPath);

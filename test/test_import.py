@@ -136,6 +136,7 @@ if __name__ == "__main__":
     test_normal("test_sandbox.cas", "Sandbox exec")
     test_normal("6_sandbox/5_block_python.cas", "Sandbox block+python")
     test_error("6_sandbox/6_python_error.cas", "Sandbox python error", "command failed")
+    test_normal("6_sandbox/7_heredoc.cas", "Sandbox heredoc")
     test_normal("test_stat.cas", "File stat")
     test_normal("comprehensive_v2.cas", "Comprehensive v2")
 
