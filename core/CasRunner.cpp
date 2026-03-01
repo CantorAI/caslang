@@ -306,11 +306,18 @@ namespace CasLang {
         m_ctx.logs.clear();
         m_ctx.externalHandler = m_externalHandler;
 
-        // 1. Split into lines
-        std::vector<std::string> lines;
+        // 1. Split into lines (keep both raw and trimmed)
+        std::vector<std::string> lines;     // trimmed (for commands)
+        std::vector<std::string> rawLines;  // original (for block-set)
         std::istringstream iss(script);
         std::string l;
         while (std::getline(iss, l)) {
+             // Strip only trailing \r\n for raw
+             std::string raw = l;
+             while (!raw.empty() && (raw.back() == '\r' || raw.back() == '\n'))
+                 raw.pop_back();
+             rawLines.push_back(raw);
+
              size_t first = l.find_first_not_of(" \t\r\n");
              if (first == std::string::npos) lines.push_back(""); 
              else {
@@ -368,7 +375,6 @@ namespace CasLang {
                                     if (blockAccum[ci] == '\\' && ci + 1 < blockAccum.size()) {
                                         char next = blockAccum[ci + 1];
                                         if (next == 'n')  { unescaped += '\n'; ++ci; continue; }
-                                        if (next == 't')  { unescaped += '\t'; ++ci; continue; }
                                         if (next == '\\') { unescaped += '\\'; ++ci; continue; }
                                     }
                                     unescaped += blockAccum[ci];
@@ -384,8 +390,8 @@ namespace CasLang {
                     }
                     catch (...) {}
                 }
-                // Not a terminator — accumulate as raw text
-                blockAccum += line + "\n";
+                // Not a terminator — accumulate as raw text (preserve indentation)
+                blockAccum += rawLines[pc] + "\n";
                 pc++;
                 continue;
             }

@@ -1,0 +1,35 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] Start: block-set sandbox test"}
+
+{"op":"flow.set","name":"script","mode":"block","nonce":"__END_SCRIPT__"}
+import os
+count = 0
+root_dir = r"D:\CantorAI\caslang\test"
+for dirpath, dirnames, filenames in os.walk(root_dir):
+    for fn in filenames:
+        if fn.lower().endswith(".cas"):
+            count += 1
+print(count)
+{"op":"flow.end_set","name":"script","nonce":"__END_SCRIPT__"}
+
+{"op":"str.print","msg":"[CP2] script var set, content: ${script}"}
+{"op":"str.len","s":"${script}","as":"slen"}
+{"op":"str.print","msg":"[CP3] script length: ${slen}"}
+
+{"op":"flow.if","cond":"${slen} == 0"}
+    {"op":"str.print","msg":"[FAIL] script var is empty!"}
+    {"op":"flow.return","value":"FAIL_EMPTY_SCRIPT"}
+{"op":"flow.endif"}
+
+{"op":"sandbox.exec","cmd":"python -c \"${script}\"","as":"result"}
+{"op":"str.print","msg":"[CP4] sandbox raw result: '${result}'"}
+{"op":"str.len","s":"${result}","as":"rlen"}
+{"op":"str.print","msg":"[CP5] result length: ${rlen}"}
+
+{"op":"flow.if","cond":"${rlen} == 0"}
+    {"op":"str.print","msg":"[FAIL] sandbox returned empty!"}
+    {"op":"flow.return","value":"FAIL_EMPTY_RESULT"}
+{"op":"flow.endif"}
+
+{"op":"str.print","msg":"[CP6] Test complete, returning: ${result}"}
+{"op":"flow.return","value":"${result}"}
