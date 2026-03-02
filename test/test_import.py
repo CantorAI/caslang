@@ -119,6 +119,7 @@ if __name__ == "__main__":
     test_normal("2_ops/10_dict_v2.cas", "Dict Ops")
     test_normal("2_ops/11_block_expand.cas", "Block-expand + boolean cond")
     test_normal("2_ops/12_json_ops.cas", "JSON parse + save")
+    test_normal("2_ops/13_json_query.cas", "JSON query dot-path")
 
     # === Intensive ===
     print("\n--- Intensive ---")

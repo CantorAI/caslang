@@ -275,6 +275,18 @@ Available tool names and their parameters are listed after this prompt.
 {"op":"json.save","obj":"${mydict}","as":"json_str"}
   Serialize a dict or list to a JSON string.
 
+{"op":"json.query","obj":"${data}","path":"a.b.c","as":"val"}
+  Deep query into any dict/list using dot-path syntax.
+  Works on ANY dict/list, not just json.parse results.
+  Path syntax:
+  - a.b.c       — dict key traversal
+  - items[0]    — array index
+  - items[0].name — mixed
+  - items[*].name — wildcard: collect 'name' from every element
+  Example:
+    {"op":"json.query","obj":"${doc}","path":"analysis.evidence","as":"ev"}
+    {"op":"json.query","obj":"${doc}","path":"results[*].score","as":"all_scores"}
+
 ------------------------------------
 8I) SANDBOX (sandbox.exec) — LAST RESORT ONLY
 ------------------------------------
