@@ -234,6 +234,16 @@ namespace CasLang {
                  if (scopeStack.empty() || scopeStack.back() != "if")
                     return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value(), "final" };
             }
+            // Catch unknown flow commands during validation
+            else if (op.substr(0, 5) == "flow." && op != "flow.set" && op != "flow.break" 
+                     && op != "flow.continue" && op != "flow.return") {
+                std::string badCmd = op.substr(5);
+                std::string hint;
+                if (badCmd == "end_if") hint = " (did you mean flow.endif?)";
+                else if (badCmd == "elseif" || badCmd == "elif") hint = " (not supported, use flow.endif then flow.if)";
+                else if (badCmd == "end_set") hint = " (flow.end_set only closes block-set mode, check your nonce)";
+                return { false, "Line " + std::to_string(i + 1) + ": E2002 E_FLOW_UNKNOWN: Unknown flow command: " + op + hint, (int)i + 1, X::Value(), "final" };
+            }
         }
 
         if (inBlock) {
@@ -241,7 +251,7 @@ namespace CasLang {
         }
 
         if (!scopeStack.empty()) {
-            return { false, "Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
+            return { false, "Line " + std::to_string(lines.size()) + ": E2302 Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
         }
 
         return { true, "", -1, X::Value(), "final" };
@@ -801,6 +811,16 @@ namespace CasLang {
                     m_ctx.return_flag = true;
                     m_ctx.return_to = args.count("to") ? args["to"].asString() : "final";
                     return { true, "", -1, m_ctx.return_value, m_ctx.return_to };
+                }
+                else {
+                    // Unrecognized flow command — report error with helpful hint
+                    isErr = true;
+                    errMsg = "E2002 E_FLOW_UNKNOWN: Unknown flow command: flow." + cmd;
+                    // Suggest similar commands
+                    if (cmd == "end_if") errMsg += " (did you mean flow.endif?)";
+                    else if (cmd == "end_set") errMsg += " (flow.end_set is only for closing block-set mode)";
+                    else if (cmd == "elseif" || cmd == "elif") errMsg += " (flow.elseif is not supported, use flow.endif then flow.if)";
+                    errMsg += " | line: " + line;
                 }
             }
             else {

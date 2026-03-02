@@ -145,6 +145,7 @@ Rules:
 {"op":"flow.if","cond":"..."}
 {"op":"flow.else"}
 {"op":"flow.endif"}
+  IMPORTANT: The closing command is flow.endif (NOT flow.end_if).
   Conditions support: comparisons (==, !=, <, >, <=, >=), negation (!),
   and bare boolean values (True/False from str.contains etc.).
   Example: {"op":"flow.if","cond":"${has_match}"}
