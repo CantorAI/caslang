@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <regex>
 #include <iostream>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace CasLang {
     class CasStringOps : public CasOps {
@@ -36,7 +39,27 @@ namespace CasLang {
             if (command == "print") {
                 std::string msg = S("msg");
                 if (msg.empty()) msg = s; // Fallback to 's' if 'msg' not present
-                std::cout << "[CasLang L" << ctx.current_line << "] " << msg << std::endl;
+                std::string line = "[CasLang L" + std::to_string(ctx.current_line) + "] " + msg + "\n";
+#ifdef _WIN32
+                // Use WriteConsoleW for reliable UTF-8 output on Windows
+                HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                if (hOut != INVALID_HANDLE_VALUE && GetConsoleMode(hOut, (LPDWORD)&hOut + 1)) {
+                    // It's a real console — convert UTF-8 to UTF-16 and write
+                    int wlen = MultiByteToWideChar(CP_UTF8, 0, line.c_str(), (int)line.size(), nullptr, 0);
+                    if (wlen > 0) {
+                        std::wstring wline(wlen, L'\0');
+                        MultiByteToWideChar(CP_UTF8, 0, line.c_str(), (int)line.size(), &wline[0], wlen);
+                        HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+                        DWORD written;
+                        WriteConsoleW(hStdOut, wline.c_str(), (DWORD)wline.size(), &written, nullptr);
+                    }
+                } else {
+                    // Redirected to file/pipe — write UTF-8 directly
+                    fwrite(line.c_str(), 1, line.size(), stdout);
+                }
+#else
+                std::cout << line;
+#endif
                 return X::Value(true);
             }
             

@@ -61,6 +61,8 @@ E) JSON rules:
 - Use double quotes for keys/strings.
 - Values in args must be SCALARS ONLY: string | number | bool | null
 - NEVER inline JSON arrays or objects directly as arg values.
+- Numeric values (0, -1, etc.) and booleans (true, false) MUST be bare JSON
+  values, NOT strings. WRONG: "limit":"-1" or "limit":-1". CORRECT: "limit":-1
 - ESCAPING: To use a newline, use "\n" inside the JSON string. Do NOT double-escape to "\\n" unless you mean a literal backslash.
 
 F) Every JSONL line MUST end with a closing brace }.
@@ -143,6 +145,9 @@ Rules:
 {"op":"flow.if","cond":"..."}
 {"op":"flow.else"}
 {"op":"flow.endif"}
+  Conditions support: comparisons (==, !=, <, >, <=, >=), negation (!),
+  and bare boolean values (True/False from str.contains etc.).
+  Example: {"op":"flow.if","cond":"${has_match}"}
 
 {"op":"flow.loop_start","var":"x","in":"${listVar}","index":"i","from":0,"limit":-1}
 {"op":"flow.loop_end"}
@@ -194,6 +199,13 @@ To read a dict value, use bracket access: ${d['key']}
 {"op":"str.replace","s":"${x}","old":"foo","new":"bar","as":"y"}
 {"op":"str.slice","s":"${x}","start":0,"end":10,"as":"sub"}
 {"op":"str.match","s":"${x}","regex":"...","case":"sensitive|insensitive","as":"m"}
+  IMPORTANT: str.match returns a DICT with keys: {match, pos, groups}
+  - groups is a LIST of captured group strings.
+  - To extract the first capture group:
+    {"op":"flow.set","name":"grps","value":"${m['groups']}"}
+    {"op":"flow.set","name":"val","value":"${grps[0]}"}
+  - If no match, result is False (boolean). Check before accessing:
+    {"op":"flow.if","cond":"${m} != False"}
 {"op":"str.count_match","s":"${x}","regex":"...","case":"sensitive|insensitive","as":"n"}
 {"op":"str.count","s":"${x}","sub":"...","as":"n"}
 {"op":"str.print","msg":"..."}
@@ -249,6 +261,19 @@ Available tool names and their parameters are listed after this prompt.
 ------------------------------------
 {"op":"time.now","as":"t_ms"}
 {"op":"time.sleep","ms":200,"as":"ok"}
+
+------------------------------------
+8J) JSON OPS (json.*)
+------------------------------------
+{"op":"json.parse","s":"${raw_json_string}","as":"obj"}
+  Parse a JSON string into a dict or list.
+  Use this after fs.read_file to work with JSON data:
+    {"op":"fs.read_file","path":"${p}","as":"raw"}
+    {"op":"json.parse","s":"${raw}","as":"data"}
+    {"op":"flow.set","name":"name","value":"${data['name']}"}
+
+{"op":"json.save","obj":"${mydict}","as":"json_str"}
+  Serialize a dict or list to a JSON string.
 
 ------------------------------------
 8I) SANDBOX (sandbox.exec) — LAST RESORT ONLY

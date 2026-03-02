@@ -1,0 +1,25 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] Block-expand + boolean cond test"}
+{"op":"flow.set","name":"items","value":"[\"apple\",\"banana\",\"cherry\"]"}
+{"op":"flow.set","name":"matches","value":"[]"}
+{"op":"flow.loop_start","var":"item","in":"${items}","index":"i","from":0,"limit":-1}
+    {"op":"str.contains","s":"${item}","sub":"an","as":"has_an"}
+    {"op":"str.print","msg":"[CP2] i=${i} item=${item} has_an=${has_an}"}
+    {"op":"flow.if","cond":"${has_an}"}
+        {"op":"list.append","list":"${matches}","value":"${item}"}
+        {"op":"str.print","msg":"  -> matched: ${item}"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+{"op":"str.print","msg":"[CP3] matches: ${matches}"}
+{"op":"list.len","list":"${matches}","as":"count"}
+{"op":"str.print","msg":"[CP4] count=${count}"}
+{"op":"flow.set","name":"greeting","value":"hello"}
+{"op":"flow.set","name":"template","mode":"block","nonce":"__END_TPL__"}
+Found ${count} items containing 'an': ${matches}
+Greeting: ${greeting}
+{"op":"flow.end_set","name":"template","nonce":"__END_TPL__"}
+{"op":"str.print","msg":"[CP5] expanded template: ${template}"}
+{"op":"flow.if","cond":"${count} == 2"}
+    {"op":"flow.return","value":"${template}"}
+{"op":"flow.endif"}
+{"op":"flow.return","value":"FAIL: expected 2 matches"}

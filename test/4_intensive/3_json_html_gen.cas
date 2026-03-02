@@ -1,0 +1,55 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] JSON HTML gen test starting"}
+{"op":"flow.set","name":"root","value":"D:\\Test\\2026CV\\qwen_desc"}
+{"op":"flow.set","name":"img_dir","value":"${root}\\Test101_frames"}
+{"op":"flow.set","name":"json_dir","value":"${root}\\qwen_desc_results"}
+{"op":"str.print","msg":"[CP2] scanning ${json_dir}"}
+{"op":"fs.list","dir":"${json_dir}","pattern":"frame_*.json","recursive":false,"include_dirs":false,"as":"json_files"}
+{"op":"list.len","list":"${json_files}","as":"json_count"}
+{"op":"str.print","msg":"[CP3] found ${json_count} json files"}
+{"op":"flow.set","name":"items","value":"[]"}
+{"op":"flow.loop_start","var":"json_path","in":"${json_files}","index":"j","from":0,"limit":-1}
+    {"op":"str.print","msg":"[CP4] processing [${j}]: ${json_path}"}
+    {"op":"fs.read_file","path":"${json_path}","as":"raw"}
+    {"op":"json.parse","s":"${raw}","as":"doc"}
+    {"op":"str.print","msg":"[CP5] parsed ok, keys: image_path, analysis"}
+    {"op":"flow.set","name":"analysis","value":"${doc['analysis']}"}
+    {"op":"flow.set","name":"evidence","value":"${analysis['evidence']}"}
+    {"op":"flow.set","name":"img_file","value":"${doc['image_path']}"}
+    {"op":"str.match","s":"${img_file}","regex":"([^\\\\]+)$","as":"fn_match"}
+    {"op":"flow.set","name":"fn_groups","value":"${fn_match['groups']}"}
+    {"op":"flow.set","name":"fname","value":"${fn_groups[0]}"}
+    {"op":"flow.set","name":"local_img","value":"${img_dir}\\${fname}"}
+    {"op":"str.print","msg":"[CP6] [${j}] ${fname}: ${evidence}"}
+    {"op":"flow.set","name":"snippet","mode":"block","nonce":"__END_S__"}
+<div class="card"><img src="${local_img}" /><p>${evidence}</p></div>
+{"op":"flow.end_set","name":"snippet","nonce":"__END_S__"}
+    {"op":"list.append","list":"${items}","value":"${snippet}"}
+{"op":"flow.loop_end"}
+{"op":"list.len","list":"${items}","as":"item_count"}
+{"op":"str.print","msg":"[CP7] built ${item_count} cards"}
+{"op":"flow.set","name":"html_body","value":""}
+{"op":"flow.loop_start","var":"item","in":"${items}","index":"k","from":0,"limit":-1}
+    {"op":"flow.set","name":"html_body","value":"${html_body}${item}"}
+{"op":"flow.loop_end"}
+{"op":"str.print","msg":"[CP8] assembled html_body"}
+{"op":"flow.set","name":"page","mode":"block","nonce":"__END_HTML__"}
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>VLM Descriptions</title>
+<style>
+body{font-family:sans-serif;background:#1a1a2e;color:#eee;margin:0;padding:20px}
+h1{text-align:center;color:#e94560}
+.grid{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
+.card{background:#16213e;border-radius:12px;overflow:hidden;width:320px;box-shadow:0 4px 15px rgba(0,0,0,.4)}
+.card img{width:100%;height:200px;object-fit:cover}
+.card p{padding:12px;margin:0;font-size:14px;line-height:1.5;color:#ccc}
+</style></head>
+<body><h1>Video Frame Descriptions</h1><div class="grid">${html_body}</div></body></html>
+{"op":"flow.end_set","name":"page","nonce":"__END_HTML__"}
+{"op":"fs.write_file","path":"${root}\\index.html","data":"${page}","append":false,"as":"bytes_written"}
+{"op":"str.print","msg":"[CP9] wrote ${bytes_written} bytes to ${root}\\index.html"}
+{"op":"flow.if","cond":"${bytes_written} > 0"}
+    {"op":"str.print","msg":"[CP10] SUCCESS: generated ${item_count} cards, ${bytes_written} bytes"}
+    {"op":"flow.return","value":true}
+{"op":"flow.endif"}
+{"op":"flow.return","value":false}

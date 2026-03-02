@@ -117,10 +117,13 @@ if __name__ == "__main__":
     test_normal("2_ops/8_str_v2.cas", "String Count")
     test_normal("2_ops/9_list.cas", "List Ops")
     test_normal("2_ops/10_dict_v2.cas", "Dict Ops")
+    test_normal("2_ops/11_block_expand.cas", "Block-expand + boolean cond")
+    test_normal("2_ops/12_json_ops.cas", "JSON parse + save")
 
     # === Intensive ===
     print("\n--- Intensive ---")
     test_normal("4_intensive/1_benchmark.cas", "Benchmark")
+    # test_normal("4_intensive/3_json_html_gen.cas", "JSON HTML gen (advanced)")  # needs D:\Test\2026CV\qwen_desc
 
     # === Error Tests ===
     print("\n--- Error Cases ---")
