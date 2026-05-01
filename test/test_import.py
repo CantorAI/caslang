@@ -103,22 +103,28 @@ if __name__ == "__main__":
     test_normal("1_flow/2_loop.cas", "Loop")
     test_normal("1_flow/3_retry.cas", "Retry")
     test_normal("1_flow/4_copy.cas", "Deep Copy")
+    test_normal("1_flow/5_early_return.cas", "Early Return", lambda r: r.get("data") == 30)
 
     # === Operations ===
     print("\n--- Operations ---")
     test_normal("2_ops/1_str.cas", "String Upper")
     test_normal("2_ops/2_num.cas", "Expression (was num.add)")
     test_normal("2_ops/3_fs.cas", "File System")
+    test_normal("2_ops/3_fs_search.cas", "FS Search (user script)")
     test_normal("2_ops/4_time.cas", "Time")
     test_normal("2_ops/6_dict.cas", "Dict stat + bracket access")
     test_normal("2_ops/7_expr.cas", "Expressions")
     test_normal("2_ops/8_str_v2.cas", "String Count")
     test_normal("2_ops/9_list.cas", "List Ops")
     test_normal("2_ops/10_dict_v2.cas", "Dict Ops")
+    test_normal("2_ops/11_block_expand.cas", "Block-expand + boolean cond")
+    test_normal("2_ops/12_json_ops.cas", "JSON parse + save")
+    test_normal("2_ops/13_json_query.cas", "JSON query dot-path")
 
     # === Intensive ===
     print("\n--- Intensive ---")
     test_normal("4_intensive/1_benchmark.cas", "Benchmark")
+    # test_normal("4_intensive/3_json_html_gen.cas", "JSON HTML gen (advanced)")  # needs D:\Test\2026CV\qwen_desc
 
     # === Error Tests ===
     print("\n--- Error Cases ---")
@@ -132,6 +138,9 @@ if __name__ == "__main__":
     test_normal("test.cas", "Basic test")
     test_normal("test_continue.cas", "Continue flow")
     test_normal("test_sandbox.cas", "Sandbox exec")
+    test_normal("6_sandbox/5_block_python.cas", "Sandbox block+python")
+    test_error("6_sandbox/6_python_error.cas", "Sandbox python error", "command failed")
+    test_normal("6_sandbox/7_heredoc.cas", "Sandbox heredoc")
     test_normal("test_stat.cas", "File stat")
     test_normal("comprehensive_v2.cas", "Comprehensive v2")
 

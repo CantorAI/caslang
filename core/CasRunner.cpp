@@ -55,7 +55,8 @@ namespace CasLang {
              }
         }
         
-        if (t == "true") return true;
+        if (t == "true" || t == "True") return true;
+        if (t == "false" || t == "False") return false;
         
         X::Value v = EvaluateExpr(t);
         return v.IsTrue();
@@ -97,7 +98,9 @@ namespace CasLang {
             j = json::parse(line);
         }
         catch (const std::exception& e) {
-            outErr = std::string("E1004 E_JSON_INVALID: ") + e.what();
+            std::string preview = line.substr(0, 200);
+            if (line.size() > 200) preview += "...";
+            outErr = std::string("E1004 E_JSON_INVALID: ") + e.what() + " | line: " + preview;
             return false;
         }
 
@@ -231,6 +234,16 @@ namespace CasLang {
                  if (scopeStack.empty() || scopeStack.back() != "if")
                     return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value(), "final" };
             }
+            // Catch unknown flow commands during validation
+            else if (op.substr(0, 5) == "flow." && op != "flow.set" && op != "flow.break" 
+                     && op != "flow.continue" && op != "flow.return") {
+                std::string badCmd = op.substr(5);
+                std::string hint;
+                if (badCmd == "end_if") hint = " (did you mean flow.endif?)";
+                else if (badCmd == "elseif" || badCmd == "elif") hint = " (not supported, use flow.endif then flow.if)";
+                else if (badCmd == "end_set") hint = " (flow.end_set only closes block-set mode, check your nonce)";
+                return { false, "Line " + std::to_string(i + 1) + ": E2002 E_FLOW_UNKNOWN: Unknown flow command: " + op + hint, (int)i + 1, X::Value(), "final" };
+            }
         }
 
         if (inBlock) {
@@ -238,7 +251,7 @@ namespace CasLang {
         }
 
         if (!scopeStack.empty()) {
-            return { false, "Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
+            return { false, "Line " + std::to_string(lines.size()) + ": E2302 Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
         }
 
         return { true, "", -1, X::Value(), "final" };
@@ -306,11 +319,18 @@ namespace CasLang {
         m_ctx.logs.clear();
         m_ctx.externalHandler = m_externalHandler;
 
-        // 1. Split into lines
-        std::vector<std::string> lines;
+        // 1. Split into lines (keep both raw and trimmed)
+        std::vector<std::string> lines;     // trimmed (for commands)
+        std::vector<std::string> rawLines;  // original (for block-set)
         std::istringstream iss(script);
         std::string l;
         while (std::getline(iss, l)) {
+             // Strip only trailing \r\n for raw
+             std::string raw = l;
+             while (!raw.empty() && (raw.back() == '\r' || raw.back() == '\n'))
+                 raw.pop_back();
+             rawLines.push_back(raw);
+
              size_t first = l.find_first_not_of(" \t\r\n");
              if (first == std::string::npos) lines.push_back(""); 
              else {
@@ -368,7 +388,6 @@ namespace CasLang {
                                     if (blockAccum[ci] == '\\' && ci + 1 < blockAccum.size()) {
                                         char next = blockAccum[ci + 1];
                                         if (next == 'n')  { unescaped += '\n'; ++ci; continue; }
-                                        if (next == 't')  { unescaped += '\t'; ++ci; continue; }
                                         if (next == '\\') { unescaped += '\\'; ++ci; continue; }
                                     }
                                     unescaped += blockAccum[ci];
@@ -384,8 +403,8 @@ namespace CasLang {
                     }
                     catch (...) {}
                 }
-                // Not a terminator — accumulate as raw text
-                blockAccum += line + "\n";
+                // Not a terminator — accumulate as raw text (preserve indentation)
+                blockAccum += rawLines[pc] + "\n";
                 pc++;
                 continue;
             }
@@ -453,26 +472,35 @@ namespace CasLang {
                             if (accessType == 1) { // Dict
                                 if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, X::Value(), "final" };
                                 X::Dict d(base);
-                                if (d->Has(keyName.c_str())) { kv.second = d[keyName.c_str()]; continue; }
+                                if (d->Has(keyName.c_str())) {
+                                    X::Value v = d[keyName.c_str()];
+                                    if (v.isString()) { s = v.asString(); }
+                                    else { kv.second = v; continue; }
+                                }
                                 else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, X::Value(), "final" };
                             }
                             else if (accessType == 2) { // List
                                 if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, X::Value(), "final" };
                                 X::List l(base);
-                                if (listIdx >= 0 && listIdx < l.Size()) { kv.second = l[(int)listIdx]; continue; }
+                                if (listIdx >= 0 && listIdx < l.Size()) {
+                                    X::Value v = l[(int)listIdx];
+                                    if (v.isString()) { s = v.asString(); }
+                                    else { kv.second = v; continue; }
+                                }
                                 else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, X::Value(), "final" };
                             }
                         }
                         else {
                             if (varName == "_last") {
                                 if (m_ctx._last.IsValid()) {
-                                    kv.second = m_ctx._last;
-                                    continue;
+                                    if (m_ctx._last.isString()) { s = m_ctx._last.asString(); }
+                                    else { kv.second = m_ctx._last; continue; }
                                 }
                             }
                             else if (m_ctx.vars.count(varName)) {
-                                kv.second = m_ctx.vars[varName];
-                                continue;
+                                X::Value v = m_ctx.vars[varName];
+                                if (v.isString()) { s = v.asString(); }
+                                else { kv.second = v; continue; }
                             }
                         }
                     }
@@ -784,6 +812,16 @@ namespace CasLang {
                     m_ctx.return_to = args.count("to") ? args["to"].asString() : "final";
                     return { true, "", -1, m_ctx.return_value, m_ctx.return_to };
                 }
+                else {
+                    // Unrecognized flow command — report error with helpful hint
+                    isErr = true;
+                    errMsg = "E2002 E_FLOW_UNKNOWN: Unknown flow command: flow." + cmd;
+                    // Suggest similar commands
+                    if (cmd == "end_if") errMsg += " (did you mean flow.endif?)";
+                    else if (cmd == "end_set") errMsg += " (flow.end_set is only for closing block-set mode)";
+                    else if (cmd == "elseif" || cmd == "elif") errMsg += " (flow.elseif is not supported, use flow.endif then flow.if)";
+                    errMsg += " | line: " + line;
+                }
             }
             else {
                 // Execute Op
@@ -793,7 +831,7 @@ namespace CasLang {
                         m_ctx._last = m_ops[ns]->Execute({ns}, cmd, args, m_ctx, errs);
                         if (!errs.empty()) {
                             isErr = true;
-                            errMsg = errs[0];
+                            errMsg = errs[0] + " | line: " + line;
                         }
                         if (args.count("as")) {
                             m_ctx.vars[args["as"].asString()] = m_ctx._last;

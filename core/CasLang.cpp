@@ -7,6 +7,7 @@
 #include "CasListOps.h"
 #include "CasToolOps.h"
 #include "CasSandboxOps.h"
+#include "CasJsonOps.h"
 #include "xlang.h"
 #include <fstream>
 #include <sstream>
@@ -48,6 +49,7 @@ namespace CasLang {
         runner.Register(std::make_unique<CasListOps>());
         runner.Register(std::make_unique<CasToolOps>());
         runner.Register(std::make_unique<CasSandboxOps>());
+        runner.Register(std::make_unique<CasJsonOps>());
 
         CasRunner::Result res = runner.Run(code);
         

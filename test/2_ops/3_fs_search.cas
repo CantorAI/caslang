@@ -1,0 +1,19 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"root","value":"D:\\CantorAI\\xlang"}
+{"op":"str.print","msg":"[Checkpoint 1] Starting fs_search in: ${root}"}
+
+{"op":"fs.list","dir":"${root}","recursive":true,"as":"paths"}
+{"op":"str.print","msg":"[Checkpoint 2] Listed files, count pending loop"}
+
+{"op":"flow.set","name":"matches","value":"[]"}
+{"op":"flow.loop_start","var":"p","in":"${paths}","index":"i","from":0,"limit":-1}
+    {"op":"fs.read_file","path":"${p}","as":"content"}
+    {"op":"str.contains","s":"${content}","sub":"mMapApiBridge","as":"has"}
+    {"op":"flow.if","cond":"'${has}' == 'True'"}
+        {"op":"str.print","msg":"[Match] ${p}"}
+        {"op":"list.append","list":"${matches}","value":"${p}"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+
+{"op":"str.print","msg":"[Checkpoint 3] Search complete. Matches: ${matches}"}
+{"op":"flow.return","value":"${matches}"}

@@ -10,6 +10,8 @@
 #include "CasTimeOps.h"
 #include "CasListOps.h"
 #include "CasDictOps.h"
+#include "CasSandboxOps.h"
+#include "CasJsonOps.h"
 #include "AgentPrompts.h"
 #include "log.h"
 
@@ -404,6 +406,8 @@ namespace CasLang
         m_CasRunner.Register(std::make_unique<CasLang::CasTimeOps>());
         m_CasRunner.Register(std::make_unique<CasLang::CasDictOps>());
         m_CasRunner.Register(std::make_unique<CasLang::CasListOps>());
+        m_CasRunner.Register(std::make_unique<CasLang::CasSandboxOps>());
+        m_CasRunner.Register(std::make_unique<CasLang::CasJsonOps>());
     }
     void CasFilter::Run()
     {
