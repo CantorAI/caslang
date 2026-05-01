@@ -27,6 +27,25 @@ ORDER BY timestamp DESC LIMIT 1000
 {"op":"flow.return","value":"${results}"}
 ```
 
+### Example 2: Local File Automation
+
+caslang isn't just for backend tool calls—it can safely orchestrate local file operations to generate reports or process data on the host machine:
+
+```jsonl
+{"op":"caslang","version":"0.3"}
+{"op":"fs.list","dir":"/data/results","pattern":"*.json","as":"files"}
+{"op":"flow.set","name":"html","value":"<h1>Analysis Report</h1>"}
+
+{"op":"flow.loop_start","var":"file","in":"${files}"}
+    {"op":"fs.read_file","path":"${file}","as":"raw"}
+    {"op":"json.parse","s":"${raw}","as":"data"}
+    {"op":"flow.set","name":"html","value":"${html}<p>${data['summary']}</p>"}
+{"op":"flow.loop_end"}
+
+{"op":"fs.write_file","path":"/data/report.html","data":"${html}"}
+{"op":"str.print","msg":"Report generated successfully!"}
+```
+
 ## Why caslang?
 
 - **Single-pass execution**: One script, one validation, one execution. Reduces latency and hallucination risks.
