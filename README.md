@@ -10,17 +10,21 @@
 
 We use **JSONL (JSON Lines)** as our standard script format. Each line in a caslang script is a valid JSON object representing a single command. This makes it highly LLM-friendly, easily parsable, and machine-validated.
 
-### Example
+### Example: Semantic Video Search
+
+An LLM can generate this entire plan to execute a semantic search over a SQL database, without escaping multiline strings:
 
 ```jsonl
 {"op":"caslang","version":"0.3"}
-{"op":"flow.set","name":"x","value":5}
-{"op":"flow.if","cond":"${x} > 3"}
-    {"op":"flow.set","name":"res","value":"big"}
-{"op":"flow.else"}
-    {"op":"flow.set","name":"res","value":"small"}
-{"op":"flow.endif"}
-{"op":"flow.return","value":"${res}"}
+{"op":"flow.set","name":"target","value":"a red car driving in the rain"}
+{"op":"flow.set","name":"query","mode":"block","nonce":"__SQL__"}
+SELECT image_id, device_id, timestamp
+FROM VisionDB 
+WHERE object_class = 'car' AND confidence > 0.85
+ORDER BY timestamp DESC LIMIT 1000
+{"op":"flow.end_set","name":"query","nonce":"__SQL__"}
+{"op":"tool.call","tool_name":"semantic_search","target_text":"${target}","filter_sql":"${query}","as":"results"}
+{"op":"flow.return","value":"${results}"}
 ```
 
 ## Why caslang?
