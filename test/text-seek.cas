@@ -1,0 +1,10 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"input_text","value":"one person on road"}
+{"op":"flow.set","name":"sql","mode":"block","nonce":"__END_SQL__"}
+SELECT i.image_id, i.device_id, i.channel_id, i.filename, i.timestamp, o.object_id, o.class_id, o.score, o.x1, o.y1, o.x2, o.y2
+FROM Images i
+JOIN Objects o ON o.image_id = i.image_id
+WHERE o.class_id = 'person'
+ORDER BY i.timestamp DESC LIMIT 5000
+{"op":"flow.end_set","name":"sql","nonce":"__END_SQL__"}
+{"op":"tool.call","name":"seek_by_text","input_text":"${input_text}","detection_sql":"${sql}","as":"result"}

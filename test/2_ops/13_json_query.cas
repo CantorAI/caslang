@@ -1,0 +1,27 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] json.query test starting"}
+{"op":"flow.set","name":"raw","mode":"block","nonce":"__END_J__"}
+{"name":"Alice","age":30,"address":{"city":"Beijing","zip":"100000"},"scores":[90,85,92],"items":[{"id":1,"tag":"a"},{"id":2,"tag":"b"},{"id":3,"tag":"c"}]}
+{"op":"flow.end_set","name":"raw","nonce":"__END_J__"}
+{"op":"json.parse","s":"${raw}","as":"doc"}
+{"op":"str.print","msg":"[CP2] parsed doc"}
+{"op":"json.query","obj":"${doc}","path":"name","as":"name"}
+{"op":"str.print","msg":"[CP3] name=${name}"}
+{"op":"json.query","obj":"${doc}","path":"address.city","as":"city"}
+{"op":"str.print","msg":"[CP4] city=${city}"}
+{"op":"json.query","obj":"${doc}","path":"scores[1]","as":"score2"}
+{"op":"str.print","msg":"[CP5] scores[1]=${score2}"}
+{"op":"json.query","obj":"${doc}","path":"items[*].tag","as":"tags"}
+{"op":"str.print","msg":"[CP6] tags=${tags}"}
+{"op":"list.len","list":"${tags}","as":"tag_count"}
+{"op":"json.query","obj":"${doc}","path":"items[0].id","as":"first_id"}
+{"op":"str.print","msg":"[CP7] items[0].id=${first_id}, tag_count=${tag_count}"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"dict.set","dict":"${results}","key":"'name_ok'","value":true}
+{"op":"dict.set","dict":"${results}","key":"'city_ok'","value":true}
+{"op":"dict.set","dict":"${results}","key":"'score_ok'","value":true}
+{"op":"dict.set","dict":"${results}","key":"'wildcard_ok'","value":true}
+{"op":"dict.set","dict":"${results}","key":"'mixed_ok'","value":true}
+{"op":"json.query","obj":"${doc}","path":"address","as":"addr"}
+{"op":"str.print","msg":"[CP8] addr=${addr}"}
+{"op":"flow.return","value":"${results}"}

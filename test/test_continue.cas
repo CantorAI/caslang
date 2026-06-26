@@ -1,0 +1,26 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"test","value":"continue"}
+
+{"op":"flow.set","name":"l","value":"[1,2,3,4,5]"}
+{"op":"flow.set","name":"sum","value":"0"}
+{"op":"flow.set","name":"skipped","value":"0"}
+
+{"op":"flow.loop_start","var":"x","in":"${l}"}
+    {"op":"flow.if","cond":"${x} == 3"}
+        {"op":"flow.set","name":"skipped","value":"=${skipped} + 1"}
+        {"op":"str.print","msg":"Skipping 3"}
+        {"op":"flow.continue"}
+    {"op":"flow.endif"}
+
+    {"op":"str.print","msg":"Processing ${x}"}
+    {"op":"flow.set","name":"sum","value":"=${sum} + ${x}"}
+{"op":"flow.loop_end"}
+
+{"op":"str.print","msg":"Sum: ${sum}"}
+{"op":"str.print","msg":"Skipped: ${skipped}"}
+
+{"op":"flow.if","cond":"${sum} == 12"}
+    {"op":"str.print","msg":"SUCCESS: Sum is 12 (1+2+4+5)"}
+{"op":"flow.else"}
+    {"op":"str.print","msg":"FAILURE: Sum is ${sum} (expected 12)"}
+{"op":"flow.endif"}

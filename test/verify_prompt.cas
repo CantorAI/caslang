@@ -1,0 +1,8 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"d","value":"{}"}
+{"op":"dict.set","dict":"${d}","key":"'foo'","value":"bar"}
+{"op":"str.print","msg":"Got: ${d['foo']}"}
+
+{"op":"flow.set","name":"s","value":"Hello World Hello"}
+{"op":"str.count_match","s":"${s}","regex":"Hello","case":"sensitive","as":"count"}
+{"op":"str.print","msg":"Count: ${count}"}

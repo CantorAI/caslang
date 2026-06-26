@@ -1,0 +1,22 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 Expressions"}
+
+{"op":"flow.set","name":"a","value":5}
+{"op":"flow.set","name":"b","value":3}
+{"op":"flow.set","name":"add_res","value":"=${a} + ${b}"}
+{"op":"flow.set","name":"mul_res","value":"=${a} * ${b}"}
+
+{"op":"flow.if","cond":"${add_res} == 8"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_add'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_add'","value":false}
+{"op":"flow.endif"}
+
+{"op":"flow.if","cond":"${mul_res} == 15"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_mul'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'expr_mul'","value":false}
+{"op":"flow.endif"}
+
+{"op":"flow.return","value":"${results}"}

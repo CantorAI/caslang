@@ -1,0 +1,26 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 Deep Copy"}
+
+{"op":"flow.set","name":"original","value":"[]"}
+{"op":"list.append","list":"${original}","value":"A"}
+
+{"op":"flow.set","name":"clone","value":"${original}"}
+{"op":"list.append","list":"${clone}","value":"B"}
+
+{"op":"list.len","list":"${original}","as":"len_orig"}
+{"op":"list.len","list":"${clone}","as":"len_clone"}
+
+{"op":"flow.if","cond":"${len_orig} == 1"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_orig'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_orig'","value":false}
+{"op":"flow.endif"}
+
+{"op":"flow.if","cond":"${len_clone} == 2"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_clone'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'deep_copy_clone'","value":false}
+{"op":"flow.endif"}
+
+{"op":"flow.return","value":"${results}"}

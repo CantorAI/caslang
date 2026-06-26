@@ -1,0 +1,14 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"root","value":"D:/CantorAI/caslang"}
+{"op":"fs.stat","path":"${root}/core/CasFSOps.h","as":"st"}
+{"op":"str.print","msg":"Full Stat: ${st}"}
+
+{"op":"str.print","msg":"File Size: ${st['size']}"}
+
+{"op":"str.print","msg":"File Exists: ${st['exists']}"}
+
+{"op":"flow.if","cond":"${st['size']} > 0"}
+  {"op":"str.print","msg":"Size check passed"}
+{"op":"flow.endif"}
+
+{"op":"flow.return","value":"${st['size']}"}

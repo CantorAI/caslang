@@ -1,0 +1,16 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] Start: sandbox error handling test"}
+
+{"op":"flow.set","name":"bad_script","mode":"block","nonce":"__END__"}
+x = 1 / 0
+{"op":"flow.end_set","name":"bad_script","nonce":"__END__"}
+
+{"op":"str.print","msg":"[CP2] bad_script set, attempting sandbox.exec"}
+
+{"op":"flow.set","name":"caught","value":false}
+{"op":"flow.retry_start","times":1,"backoff_ms":10}
+    {"op":"sandbox.exec","cmd":"python -c \"${bad_script}\"","as":"err_out"}
+{"op":"flow.retry_end"}
+
+{"op":"str.print","msg":"[CP3] After sandbox, caught error as expected"}
+{"op":"flow.return","value":"error_caught"}

@@ -1,0 +1,32 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"root","value":"D:\\Test\\2026CV\\qwen_desc"}
+{"op":"fs.list","dir":"${root}","recursive":true,"include_dirs":false,"as":"all_files"}
+{"op":"flow.set","name":"json_files","value":"[]"}
+{"op":"flow.loop_start","var":"file_path","in":"${all_files}","index":"i","from":0,"limit":-1}
+    {"op":"str.contains","s":"${file_path}","sub":".json","as":"is_json"}
+    {"op":"flow.if","cond":"${is_json}"}
+        {"op":"list.append","list":"${json_files}","value":"${file_path}"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+{"op":"flow.set","name":"items","value":"[]"}
+{"op":"flow.loop_start","var":"json_path","in":"${json_files}","index":"j","from":0,"limit":-1}
+    {"op":"fs.read_file","path":"${json_path}","as":"data"}
+    {"op":"str.match","s":"${data}","regex":"\"description\"\\s*:\\s*\"([^\"]*)\"","as":"desc_match"}
+    {"op":"str.replace","s":"${desc_match}","old":"\"description\":\"","new":"","as":"desc_part1"}
+    {"op":"str.replace","s":"${desc_part1}","old":"\"","new":"","as":"desc"}
+    {"op":"str.match","s":"${data}","regex":"\"filename\"\\s*:\\s*\"([^\"]*)\"","as":"fname_match"}
+    {"op":"str.replace","s":"${fname_match}","old":"\"filename\":\"","new":"","as":"fname_part1"}
+    {"op":"str.replace","s":"${fname_part1}","old":"\"","new":"","as":"fname"}
+    {"op":"flow.set","name":"image_path","value":"${root}\\${fname}"}
+    {"op":"flow.set","name":"img_tag","value":"<img src='${image_path}' />"}
+    {"op":"flow.set","name":"desc_tag","value":"<p>${desc}</p>"}
+    {"op":"flow.set","name":"snippet","value":"<div>${img_tag}${desc_tag}</div>"}
+    {"op":"list.append","list":"${items}","value":"${snippet}"}
+{"op":"flow.loop_end"}
+{"op":"flow.set","name":"html_body","value":""}
+{"op":"flow.loop_start","var":"item","in":"${items}","index":"k","from":0,"limit":-1}
+    {"op":"flow.set","name":"html_body","value":"${html_body}${item}"}
+{"op":"flow.loop_end"}
+{"op":"flow.set","name":"final_html","value":"<!DOCTYPE html><html><head><title>Images</title></head><body>${html_body}</body></html>"}
+{"op":"fs.write_file","path":"${root}\\index.html","data":"${final_html}","append":false,"as":"bytes_written"}
+{"op":"flow.return","value":"${bytes_written}","to":"final"}

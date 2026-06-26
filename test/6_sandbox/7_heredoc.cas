@@ -1,0 +1,29 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] Start: heredoc sandbox test"}
+
+{"op":"flow.set","name":"pycmd","mode":"block","nonce":"__END_PY__"}
+python - <<'PY'
+import os
+count = 0
+root_dir = r'D:\CantorAI\caslang\test'
+for dirpath, dirnames, filenames in os.walk(root_dir):
+    for f in filenames:
+        if f.lower().endswith('.cas'):
+            count += 1
+print(count)
+PY
+{"op":"flow.end_set","name":"pycmd","nonce":"__END_PY__"}
+
+{"op":"str.print","msg":"[CP2] pycmd set"}
+{"op":"sandbox.exec","cmd":"${pycmd}","as":"result"}
+{"op":"str.print","msg":"[CP3] sandbox result: '${result}'"}
+{"op":"str.len","s":"${result}","as":"rlen"}
+{"op":"str.print","msg":"[CP4] result length: ${rlen}"}
+
+{"op":"flow.if","cond":"${rlen} == 0"}
+    {"op":"str.print","msg":"[FAIL] empty result"}
+    {"op":"flow.return","value":"FAIL"}
+{"op":"flow.endif"}
+
+{"op":"str.print","msg":"[CP5] Test passed, result: ${result}"}
+{"op":"flow.return","value":"${result}"}

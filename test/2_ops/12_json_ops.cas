@@ -1,0 +1,24 @@
+{"op":"caslang","version":"0.3"}
+{"op":"str.print","msg":"[CP1] JSON ops test starting"}
+{"op":"flow.set","name":"test_json","mode":"block","nonce":"__END_J__"}
+{"name":"Alice","age":30,"scores":[90,85,92],"address":{"city":"Beijing","zip":"100000"}}
+{"op":"flow.end_set","name":"test_json","nonce":"__END_J__"}
+{"op":"str.print","msg":"[CP2] raw json: ${test_json}"}
+{"op":"json.parse","s":"${test_json}","as":"obj"}
+{"op":"str.print","msg":"[CP3] parsed ok, name=${obj['name']} age=${obj['age']}"}
+{"op":"flow.set","name":"addr","value":"${obj['address']}"}
+{"op":"str.print","msg":"[CP4] nested: city=${addr['city']} zip=${addr['zip']}"}
+{"op":"flow.set","name":"scores","value":"${obj['scores']}"}
+{"op":"list.len","list":"${scores}","as":"score_count"}
+{"op":"str.print","msg":"[CP5] scores count=${score_count}, first=${scores[0]}"}
+{"op":"dict.set","dict":"${obj}","key":"'email'","value":"alice@test.com"}
+{"op":"json.save","obj":"${obj}","as":"saved"}
+{"op":"str.print","msg":"[CP6] saved json: ${saved}"}
+{"op":"str.contains","s":"${saved}","sub":"alice@test.com","as":"has_email"}
+{"op":"flow.if","cond":"${has_email}"}
+    {"op":"str.print","msg":"[CP7] json.save verified: contains email"}
+{"op":"flow.endif"}
+{"op":"flow.if","cond":"${score_count} == 3"}
+    {"op":"flow.return","value":"${saved}"}
+{"op":"flow.endif"}
+{"op":"flow.return","value":"FAIL"}

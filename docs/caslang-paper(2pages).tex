@@ -1,0 +1,173 @@
+% CASLang 2-page extended abstract (LaTeX)
+% Compile: pdflatex caslang_2page.tex  (or latexmk -pdf)
+% NOTE: Page length depends on template settings; this is written to fit ~2 pages in 10pt, two-column.
+\documentclass[sigplan,nonacm,10pt]{acmart}
+
+\settopmatter{printfolios=false,printccs=false,printacmref=false}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+
+% Math + theorem
+\usepackage{amsmath,amssymb,amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+
+\title{CASLang: A Formally Verified IR for LLM-Driven Distributed Execution\\(Two-Page Extended Abstract)}
+
+\author{Anonymous Author(s)}
+\affiliation{\institution{Anonymous}}
+\email{anonymous@example.com}
+
+\begin{document}
+\begin{abstract}
+Large Language Models (LLMs) are increasingly used as control planes for orchestrating distributed systems, heterogeneous compute clusters, and external services. Yet LLM-generated execution plans are fragile: they often contain structural inconsistencies, uncontrolled side effects, and nondeterministic behavior due to external tool and system interactions. Existing agent frameworks rely on ad hoc JSON schemas or general-purpose scripting languages, offering limited formal guarantees and weak reproducibility.
+
+We present \textbf{CASLang}, a restricted, formally specified intermediate representation (IR) for LLM-driven execution. CASLang provides: (1) a small-step operational semantics with oracle/trace-based external modeling; (2) static well-formedness and effect-policy checking ensuring structural and policy safety; (3) deterministic replay under fixed external traces; and (4) a semantics-preserving compilation from sequential scripts to parallel DAGs. We implement CASLang atop the CantorAI distributed runtime. Preliminary results (placeholders) show \textbf{0} structural runtime failures across \textbf{N=XXX} generated scripts, \textbf{Y\%} p95 latency reduction via safe parallelization, and \textbf{Z\%} replay coverage under recorded traces.
+\end{abstract}
+
+\section{Introduction}
+LLMs are increasingly deployed as high-level planners that generate execution plans invoking tools, querying databases, manipulating files, and coordinating distributed workers and heterogeneous resources (e.g., GPUs and edge nodes). These plans must execute deterministically and safely within a runtime substrate. However, treating LLM output as directly executable code leads to systemic issues: (i) \emph{structural fragility} (malformed JSON, mismatched blocks, invalid variable access), (ii) \emph{uncontrolled effects} (unauthorized tools, unsafe filesystem writes, policy violations), and (iii) \emph{nondeterminism and irreproducibility} (external tool calls, time, and filesystem interactions).
+
+\textbf{Key Insight.} Treat LLM output as programs in a \emph{restricted, verifiable IR}. CASLang constrains expressiveness to enable static verification and semantic guarantees, while still supporting structured control flow, tool invocation, filesystem operations, distributed spawning, and safe parallelization through DAG compilation.
+
+\paragraph{Contributions (Summary).}
+\begin{itemize}\itemsep2pt
+\item A restricted IR with a formal small-step semantics using oracle/trace modeling for external interactions.
+\item Static verification via well-formedness and effect-policy checking, with provable safety properties.
+\item A deterministic replay guarantee under fixed external traces.
+\item A semantics-preserving compilation to parallel DAG execution under explicit independence conditions.
+\end{itemize}
+
+\section{CASLang Overview}
+CASLang is a JSONL-encoded IR with a finite instruction set; each instruction is a JSON object containing an \texttt{op} field and structured arguments. Blocks (e.g., conditionals, loops) are explicitly delimited.
+
+Example (schematic):
+\begin{verbatim}
+{"op":"tool.call","tool_name":"seek_by_text",
+ "input_text":"person in white shirt","top_k":10,"as":"r"}
+{"op":"flow.return","to":"final","value":"${r}"}
+\end{verbatim}
+
+Instruction categories include pure operations (\texttt{flow.set}, \texttt{dict.set}), control flow (\texttt{flow.if}, \texttt{flow.loop\_start}), external operations (\texttt{tool.call}, \texttt{sandbox.exec}), filesystem operations (\texttt{fs.read\_file}, \texttt{fs.write\_file}), and distributed execution (\texttt{dist.spawn}, \texttt{dist.wait}). CASLang is designed to be (i) LLM-friendly (simple structure), and (ii) verifier-friendly (finite ops, static schemas).
+
+\section{Formal Model (Overview)}
+\subsection{Syntax}
+A program is a finite sequence of instructions:
+\[
+P \;\triangleq\; I_1; I_2; \dots; I_n.
+\]
+Each instruction $I$ is drawn from a finite instruction set, e.g.:
+\[
+I \;::=\; \textsf{Set}(x,e)
+\mid \textsf{If}(e,P,P)
+\mid \textsf{Loop}(x,e,P)
+\mid \textsf{Return}(e)
+\mid \textsf{ToolCall}(f,a,x)
+\mid \textsf{FsRead}(p,x)
+\mid \dots
+\]
+JSONL is a serialization; the formal object is the parsed AST.
+
+\subsection{State and Trace}
+Execution configurations are:
+\[
+\langle P, pc, \Sigma, T \rangle
+\]
+where $pc\in\mathbb{N}$ is a program counter, $\Sigma=(Env,Ctrl,Out)$ is internal state, and $T$ is an external trace. The environment maps variables to values:
+\[
+Env: Var \rightarrow Value.
+\]
+External nondeterminism is modeled by a finite trace:
+\[
+T \;::=\; e_1 \cdot e_2 \cdot \dots
+\]
+with events:
+\[
+e \;::=\; \textsf{ToolResp}(f,a,r) \mid \textsf{FsResp}(p,c) \mid \textsf{TimeResp}(t).
+\]
+
+\subsection{Small-step Semantics}
+We define a transition relation:
+\[
+\langle P, pc, \Sigma, T \rangle \rightarrow \langle P, pc', \Sigma', T' \rangle.
+\]
+Assignment (illustrative):
+\[
+\frac{P[pc] = \textsf{Set}(x,e)}
+{\langle P, pc, \Sigma, T \rangle
+\rightarrow
+\langle P, pc+1, \Sigma[x \mapsto \llbracket e \rrbracket_\Sigma], T \rangle}.
+\]
+External tool call consumes one trace event:
+\[
+\frac{T = \textsf{ToolResp}(f,a,r)\cdot T'}
+{\langle P, pc, \Sigma, T \rangle
+\rightarrow
+\langle P, pc+1, \Sigma[x \mapsto r], T' \rangle}.
+\]
+This oracle/trace modeling isolates external nondeterminism and enables replay reasoning.
+
+\section{Static Verification and Guarantees}
+\subsection{Well-formedness}
+Let $WF(P)$ denote that $P$ is structurally well-formed: schemas are valid, blocks are matched, variable references are syntactically valid, and block delimiters are properly paired.
+
+\begin{theorem}[Structural Soundness]
+If $WF(P)$ holds, then execution of $P$ cannot reach a structural failure state. Formally, for any $\Sigma_0$ and $T$, if
+\[
+\langle P,0,\Sigma_0,T\rangle \rightarrow^* \langle P,pc,\Sigma,T'\rangle,
+\]
+then either execution terminates normally or the next step is defined by the operational semantics.
+\end{theorem}
+
+\subsection{Effects and Policy}
+Each instruction has an effect category:
+\[
+\epsilon \;::=\; Pure \mid IORead \mid IOWrite \mid External \mid Sandbox.
+\]
+Let $Eff(P)=\bigcup_i eff(I_i)$ be the set of effects in $P$. Let $\Pi$ be an allowed effect set (policy).
+
+\begin{theorem}[Policy Soundness]
+If $WF(P)$ and $Eff(P)\subseteq \Pi$, then execution of $P$ produces no effect outside $\Pi$.
+\end{theorem}
+
+\subsection{Deterministic Replay}
+\begin{theorem}[Replay Determinism]
+For any well-formed $P$ and initial state $\Sigma_0$, and for any fixed trace $T$, execution is deterministic. If
+\[
+\langle P,\Sigma_0,T\rangle \rightarrow^* (\Sigma_1,T_1)
+\quad\text{and}\quad
+\langle P,\Sigma_0,T\rangle \rightarrow^* (\Sigma_2,T_2),
+\]
+then $\Sigma_1=\Sigma_2$ and $T_1=T_2$.
+\end{theorem}
+
+\section{Parallel DAG Compilation (Overview)}
+CASLang programs are compiled into DAGs via (i) data-dependency analysis over $Env$ reads/writes and (ii) effect-conflict analysis (e.g., disallow reordering conflicting I/O writes). Independent instructions may be reordered/parallelized.
+
+\begin{theorem}[Sequential Equivalence of DAG Execution]
+Let $DAG(P)$ be the dependency graph derived from $P$ and let $Exec_{DAG}$ execute nodes in a topological order that respects dependencies and effect-conflict constraints. If $DAG(P)$ is acyclic and only independent instructions are reordered, then:
+\[
+Exec_{DAG}(P,\Sigma_0,T) \;=\; Exec_{Seq}(P,\Sigma_0,T).
+\]
+\end{theorem}
+
+\section{Implementation and Evaluation (Preview)}
+We implement CASLang atop the CantorAI runtime, which provides distributed task scheduling, resource-aware placement, and fault-tolerant execution. CASLang supplies the verified control-plane IR, while CantorAI serves as the execution substrate.
+
+\paragraph{Workloads.} (i) tool-orchestration pipelines, (ii) distributed database retrieval, (iii) multi-node inference coordination.
+
+\paragraph{Metrics.} Structural failure rate (E1/E2), policy violations, end-to-end latency (p50/p95), throughput, and replay coverage.
+
+\paragraph{Preliminary Results (placeholders).}
+Across \textbf{N=XXX} LLM-generated scripts:
+\begin{itemize}\itemsep2pt
+\item Structural runtime failures reduced from \textbf{X\%} to \textbf{0\%}.
+\item Policy violations reduced from \textbf{X} to \textbf{0}.
+\item p95 latency improved by up to \textbf{Y\%} via safe DAG parallelization.
+\item Deterministic replay coverage: \textbf{Z\%} under recorded traces.
+\end{itemize}
+
+\section{Conclusion}
+CASLang is a restricted, formally specified IR that enables static verification, policy safety, deterministic replay, and semantics-preserving parallel execution for LLM-driven distributed systems. Our implementation on CantorAI demonstrates that formal guarantees can coexist with practical distributed performance.
+
+\end{document}

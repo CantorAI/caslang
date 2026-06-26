@@ -1,0 +1,15 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"results","value":"{}"}
+{"op":"flow.set","name":"test_name","value":"Spec v2 String Ops"}
+
+{"op":"flow.set","name":"s","value":"Hello World World"}
+{"op":"str.count","s":"${s}","sub":"World","as":"cnt"}
+{"op":"str.log","msg":"Count result: ${cnt}"}
+
+{"op":"flow.if","cond":"${cnt} == 2"}
+    {"op":"dict.set","dict":"${results}","key":"'str_count'","value":true}
+{"op":"flow.else"}
+    {"op":"dict.set","dict":"${results}","key":"'str_count'","value":false}
+{"op":"flow.endif"}
+
+{"op":"flow.return","value":"${results}"}

@@ -1,0 +1,36 @@
+{"op":"caslang","version":"0.3"}
+{"op":"flow.set","name":"root","value":"D:/CantorAI/caslang"}
+{"op":"str.print","msg":"[Start] Counting lines in: ${root}"}
+
+{"op":"fs.list","dir":"${root}","recursive":true,"as":"filesJson"}
+{"op":"flow.set","name":"totalLines","value":0}
+{"op":"flow.set","name":"fileCount","value":0}
+
+{"op":"flow.loop_start","var":"file","in":"${filesJson}"}
+    {"op":"str.lower","s":"${file}","as":"pathLower"}
+    {"op":"str.slice","s":"${pathLower}","start":-4,"as":"ext4"}
+    {"op":"str.slice","s":"${pathLower}","start":-2,"as":"ext2"}
+
+    {"op":"flow.set","name":"isSrc","value":false}
+    {"op":"flow.if","cond":"\"${ext4}\" == \".cpp\""}
+        {"op":"flow.set","name":"isSrc","value":true}
+    {"op":"flow.endif"}
+    {"op":"flow.if","cond":"\"${ext2}\" == \".h\""}
+        {"op":"flow.set","name":"isSrc","value":true}
+    {"op":"flow.endif"}
+
+    {"op":"flow.if","cond":"${isSrc}"}
+        {"op":"fs.read_file","path":"${file}","as":"content"}
+        {"op":"str.count","s":"${content}","sub":"\\n","as":"lines"}
+        {"op":"flow.set","name":"lines","value":"=${lines} + 1"}
+
+        {"op":"flow.set","name":"totalLines","value":"=${totalLines} + ${lines}"}
+        {"op":"flow.set","name":"fileCount","value":"=${fileCount} + 1"}
+        {"op":"str.print","msg":"[FILE] ${file}: ${lines} lines"}
+    {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+
+{"op":"str.print","msg":"[Complete] Scanned ${fileCount} files."}
+{"op":"str.print","msg":"[Complete] Total lines: ${totalLines}"}
+{"op":"str.log","msg":"[LOG] Total lines: ${totalLines}"}
+{"op":"flow.return","value":"${totalLines}"}
