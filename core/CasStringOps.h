@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "CasOps.h"
 #include <algorithm>
 #include <regex>
@@ -6,6 +6,8 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
+#define CASLANG_PRINT_AS_LOG 1
 
 namespace CasLang {
     class CasStringOps : public CasOps {
@@ -39,7 +41,11 @@ namespace CasLang {
             if (command == "print") {
                 std::string msg = S("msg");
                 if (msg.empty()) msg = s; // Fallback to 's' if 'msg' not present
-                std::string line = "[CasLang L" + std::to_string(ctx.current_line) + "] " + msg + "\n";
+                std::string logMsg = "[CasLang L" + std::to_string(ctx.current_line) + "] " + msg;
+#ifdef CASLANG_PRINT_AS_LOG
+                ctx.logs.push_back(logMsg);
+#endif
+                std::string line = logMsg + "\n";
 #ifdef _WIN32
                 // Use WriteConsoleW for reliable UTF-8 output on Windows
                 HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
