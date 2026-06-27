@@ -1,6 +1,6 @@
 #pragma once
 
-#include "value.h"
+#include "xlang_value.h"
 #include <sstream> 
 #include <string>
 #include <mutex>
@@ -21,7 +21,7 @@ namespace CasLang
         {
             //do nothing just for this class instance creating
         }
-        void Init(X::Value& logger)
+        void Init(Cas::Value& logger)
         {
         }
 

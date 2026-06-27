@@ -12,69 +12,69 @@ namespace CasLang {
         
         const std::string& Namespace() const override { return m_ns; }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts, 
+        Cas::Value Execute(const std::vector<std::string>& ns_parts, 
                          const std::string& command, 
-                         std::unordered_map<std::string, X::Value>& args, 
+                         std::unordered_map<std::string, Cas::Value>& args, 
                          CasContext& ctx, 
                          std::vector<std::string>& errs) override {
             
             if (command == "get") {
                 if (args.find("dict") == args.end() || args.find("key") == args.end()) {
                     errs.push_back("dict.get requires 'dict' and 'key' arguments");
-                    return X::Value();
+                    return Cas::Value();
                 }
                 
-                X::Value dVal = args["dict"];
-                X::Value kVal = args["key"];
+                Cas::Value dVal = args["dict"];
+                Cas::Value kVal = args["key"];
                 if (!dVal.IsDict()) {
                     errs.push_back("dict.get: 'dict' argument is not a dictionary");
-                    return X::Value();
+                    return Cas::Value();
                 }
                 
-                X::Dict d(dVal);
+                Cas::Dict d(dVal);
                 
                 if (d->Has(kVal)) {
-                     // Check if there is a Get(X::Value) 
-                     // d->Get(kVal) returns X::Value
+                     // Check if there is a Get(Cas::Value) 
+                     // d->Get(kVal) returns Cas::Value
                      return d->Get(kVal);
                 } else {
-                    return X::Value(); // null
+                    return Cas::Value(); // null
                 }
             }
             else if (command == "set") {
                 if (args.find("dict") == args.end() || args.find("key") == args.end() || args.find("value") == args.end()) {
                      errs.push_back("dict.set requires 'dict', 'key', and 'value' arguments");
-                     return X::Value();
+                     return Cas::Value();
                 }
                 
-                X::Value dVal = args["dict"];
+                Cas::Value dVal = args["dict"];
                 if (!dVal.IsDict()) {
                      errs.push_back("dict.set: 'dict' argument is not a dictionary");
-                     return X::Value();
+                     return Cas::Value();
                 }
 
-                X::Dict d(dVal);
+                Cas::Dict d(dVal);
                 d->Set(args["key"], args["value"]);
-                return X::Value(true);
+                return Cas::Value(true);
             } 
             else if (command == "has") {
                  if (!args.count("dict") || !args.count("key")) {
                      errs.push_back("dict.has requires 'dict' and 'key'");
-                     return X::Value();
+                     return Cas::Value();
                  }
-                 X::Value dVal = args["dict"];
-                 if (!dVal.IsDict()) return X::Value(false);
-                 X::Dict d(dVal);
-                 return X::Value(d->Has(args["key"]));
+                 Cas::Value dVal = args["dict"];
+                 if (!dVal.IsDict()) return Cas::Value(false);
+                 Cas::Dict d(dVal);
+                 return Cas::Value(d->Has(args["key"]));
             }
             else if (command == "remove") {
                  if (!args.count("dict") || !args.count("key")) {
                      errs.push_back("dict.remove requires 'dict' and 'key'");
-                     return X::Value();
+                     return Cas::Value();
                  }
-                 X::Value dVal = args["dict"];
+                 Cas::Value dVal = args["dict"];
                  if (dVal.IsDict()) {
-                     X::Dict d(dVal);
+                     Cas::Dict d(dVal);
                      // I will implement "No Op" and log warning, to allow other tests to pass.
                      // Or I can leave it failing.
                      
@@ -82,20 +82,20 @@ namespace CasLang {
                      // No, "dict.remove" is an Op. It is supposed to mutate.
                      
                      bool bRem = d->Remove(args["key"]);
-                     return X::Value(bRem);
+                     return Cas::Value(bRem);
                  }
-                 return X::Value(false);
+                 return Cas::Value(false);
             }
             else if (command == "keys") {
                  if (!args.count("dict")) {
                      errs.push_back("dict.keys requires 'dict'");
-                     return X::Value();
+                     return Cas::Value();
                  }
-                 X::Value dVal = args["dict"];
-                 X::List keys;
+                 Cas::Value dVal = args["dict"];
+                 Cas::List keys;
                  if (dVal.IsDict()) {
-                     X::Dict d(dVal);
-                     d->Enum([&](X::Value& k, X::Value& v){
+                     Cas::Dict d(dVal);
+                     d->Enum([&](Cas::Value& k, Cas::Value& v){
                          keys->AddItem(k);
                      });
                  }
@@ -105,7 +105,7 @@ namespace CasLang {
                 errs.push_back("Unknown command: " + command);
             }
 
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace X {
+namespace Cas {
 
     class Value;
 

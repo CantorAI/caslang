@@ -1,6 +1,6 @@
-﻿#include "value.h"
+﻿#include "xlang_value.h"
 
-namespace X {
+namespace Cas {
 
     std::string Value::asString() const {
         switch (t) {

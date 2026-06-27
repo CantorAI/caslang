@@ -1,6 +1,6 @@
 #pragma once
 
-#include "value.h"
+#include "xlang_value.h"
 #include "CasRunner.h"
 
 namespace CasLang {
@@ -9,8 +9,8 @@ namespace CasLang {
     public:
 
         CasLangModule();
-        X::Value Run(X::Value fileName);
-        X::Value Runs(X::Value code);
+        Cas::Value Run(Cas::Value fileName);
+        Cas::Value Runs(Cas::Value code);
         
         static void RunScript(const std::string& fileName);
     };

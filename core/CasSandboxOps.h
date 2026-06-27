@@ -14,9 +14,9 @@ namespace CasLang {
             return k;
         }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts,
+        Cas::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
-            std::unordered_map<std::string, X::Value>& args,
+            std::unordered_map<std::string, Cas::Value>& args,
             CasContext& ctx,
             std::vector<std::string>& errs) override
         {
@@ -25,7 +25,7 @@ namespace CasLang {
                 if(args.count("cmd")) cmdLine = args["cmd"].asString();
                 if(cmdLine.empty()) {
                     errs.push_back("sandbox.exec: missing 'cmd'");
-                    return X::Value();
+                    return Cas::Value();
                 }
 
                 // Detect multiline commands: if the command contains real
@@ -97,7 +97,7 @@ namespace CasLang {
                         std::ofstream ofs(tempPath);
                         if (!ofs.is_open()) {
                             errs.push_back("sandbox.exec: failed to create temp file: " + tempPath);
-                            return X::Value();
+                            return Cas::Value();
                         }
                         ofs << scriptBody;
                         ofs.close();
@@ -117,7 +117,7 @@ namespace CasLang {
                 if (!pipe) {
                     errs.push_back("sandbox.exec: failed to start command");
                     if (useTempFile) std::remove(tempPath.c_str());
-                    return X::Value();
+                    return Cas::Value();
                 }
 
                 char buffer[128];
@@ -135,13 +135,13 @@ namespace CasLang {
 
                 if (exitCode != 0) {
                     errs.push_back("sandbox.exec: command failed (exit " + std::to_string(exitCode) + "): " + result);
-                    return X::Value(result);
+                    return Cas::Value(result);
                 }
 
-                return X::Value(result);
+                return Cas::Value(result);
             }
             errs.push_back("sandbox: unknown command " + command);
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

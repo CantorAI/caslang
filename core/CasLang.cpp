@@ -8,7 +8,7 @@
 #include "CasToolOps.h"
 #include "CasSandboxOps.h"
 #include "CasJsonOps.h"
-#include "value.h"
+#include "xlang_value.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -17,15 +17,15 @@ namespace CasLang {
     CasLangModule::CasLangModule() {
     }
 
-    X::Value CasLangModule::Run(X::Value valFileName) {
+    Cas::Value CasLangModule::Run(Cas::Value valFileName) {
         std::string fileName = valFileName.asString();
         std::cout << "[CasLang] Run file: " << fileName << std::endl;
         std::ifstream t(fileName);
         if (!t.is_open()) {
              std::cerr << "[CasLang] Failed to open file: " << fileName << std::endl;
-             X::Dict out;
+             Cas::Dict out;
              out->Set("success", false);
-             X::Dict err;
+             Cas::Dict err;
              err->Set("message", "Failed to open file: " + fileName);
              err->Set("line", 0);
              out->Set("error", err);
@@ -33,10 +33,10 @@ namespace CasLang {
         }
         std::stringstream buffer;
         buffer << t.rdbuf();
-        return Runs(X::Value(buffer.str()));
+        return Runs(Cas::Value(buffer.str()));
     }
 
-    X::Value CasLangModule::Runs(X::Value valCode) {
+    Cas::Value CasLangModule::Runs(Cas::Value valCode) {
         std::string code = valCode.asString();
         std::cout << "[CasLang] Executing code:\n" << code << std::endl;
         
@@ -57,14 +57,14 @@ namespace CasLang {
         std::cout << "[CasLang DEBUG] Run finished. Success: " << res.success << std::endl;
         if (!res.success) std::cout << "[CasLang DEBUG] Error: " << res.error << std::endl;
 
-        X::Dict out;
+        Cas::Dict out;
         out->Set("success", res.success);
 
         // Copy logs (COMMENTED OUT TO ISOLATE BRIDGE ISSUE)
         /*
-        X::List logs;
+        Cas::List logs;
         for(const auto& l : runner.GetContext().logs) {
-            X::Value v(l);
+            Cas::Value v(l);
             logs->AddItem(v);
         }
         out->Set("logs", logs);
@@ -72,14 +72,14 @@ namespace CasLang {
         if (res.success) {
             out->Set("data", res.output);
         } else {
-            X::Dict err;
+            Cas::Dict err;
             err->Set("message", res.error);
             err->Set("line", res.errorLine);
             out->Set("error", err);
         }
         
-        nlohmann::json jOut = XValueToJson(X::Value(out));
-        return X::Value(jOut.dump());
+        nlohmann::json jOut = XValueToJson(Cas::Value(out));
+        return Cas::Value(jOut.dump());
     }
 
     void CasLangModule::RunScript(const std::string& fileName) {

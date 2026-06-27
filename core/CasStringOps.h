@@ -15,9 +15,9 @@ namespace CasLang {
             return k;
         }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts,
+        Cas::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
-            std::unordered_map<std::string, X::Value>& args,
+            std::unordered_map<std::string, Cas::Value>& args,
             CasContext& ctx,
             std::vector<std::string>& errs) override
         {
@@ -28,10 +28,10 @@ namespace CasLang {
             
             // Strict Type Check for 's'
             if (args.count("s")) {
-                X::Value& v = args["s"];
+                Cas::Value& v = args["s"];
                 if (!v.isString() && command != "print" && command != "log") {
                     errs.push_back("E2103 E_ARG_TYPE: 's' must be of type string");
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
             std::string s = S("s");
@@ -60,7 +60,7 @@ namespace CasLang {
 #else
                 std::cout << line;
 #endif
-                return X::Value(true);
+                return Cas::Value(true);
             }
             
             if (command == "log") {
@@ -68,48 +68,48 @@ namespace CasLang {
                 if (msg.empty()) msg = s;
                 std::string logLine = "[L" + std::to_string(ctx.current_line) + "] " + msg;
                 ctx.logs.push_back(logLine);
-                return X::Value(true);
+                return Cas::Value(true);
             }
 
             if (command == "len") {
-                return X::Value((long long)s.size());
+                return Cas::Value((long long)s.size());
             }
             if (command == "upper") {
                 std::string out = s;
                 std::transform(out.begin(), out.end(), out.begin(), ::toupper);
-                return X::Value(out);
+                return Cas::Value(out);
             }
             if (command == "lower") {
                 std::string out = s;
                 std::transform(out.begin(), out.end(), out.begin(), ::tolower);
-                return X::Value(out);
+                return Cas::Value(out);
             }
             if (command == "trim") {
                 size_t first = s.find_first_not_of(" \t\r\n");
-                if (first == std::string::npos) return X::Value("");
+                if (first == std::string::npos) return Cas::Value("");
                 size_t last = s.find_last_not_of(" \t\r\n");
-                return X::Value(s.substr(first, last - first + 1));
+                return Cas::Value(s.substr(first, last - first + 1));
             }
             if (command == "contains") {
                 std::string sub = S("sub");
-                return X::Value(s.find(sub) != std::string::npos);
+                return Cas::Value(s.find(sub) != std::string::npos);
             }
             if (command == "find") {
                 std::string sub = S("sub");
                 auto pos = s.find(sub);
-                return X::Value((long long)((pos == std::string::npos) ? -1 : pos));
+                return Cas::Value((long long)((pos == std::string::npos) ? -1 : pos));
             }
             if (command == "replace") {
                 std::string oldS = S("old");
                 std::string newS = S("new");
-                if (oldS.empty()) return X::Value(s);
+                if (oldS.empty()) return Cas::Value(s);
                 std::string out = s;
                 size_t pos = 0;
                 while((pos = out.find(oldS, pos)) != std::string::npos) {
                     out.replace(pos, oldS.length(), newS);
                     pos += newS.length();
                 }
-                return X::Value(out);
+                return Cas::Value(out);
             }
             if (command == "slice") {
                 long long start = 0;
@@ -122,20 +122,20 @@ namespace CasLang {
                 if (start < 0) start = 0;
                 if (end > (long long)s.size()) end = s.size();
                 
-                if (start >= end) return X::Value("");
-                return X::Value(s.substr(start, end - start));
+                if (start >= end) return Cas::Value("");
+                return Cas::Value(s.substr(start, end - start));
             }
 
             if (command == "count") {
                 std::string sub = S("sub");
-                if (sub.empty()) return X::Value((long long)0);
+                if (sub.empty()) return Cas::Value((long long)0);
                 long long count = 0;
                 size_t pos = 0;
                 while ((pos = s.find(sub, pos)) != std::string::npos) {
                     count++;
                     pos += sub.length();
                 }
-                return X::Value(count);
+                return Cas::Value(count);
             }
 
             if (command == "match") {
@@ -143,7 +143,7 @@ namespace CasLang {
                 std::string caseMode = S("case");
                 if (regexStr.empty()) {
                     errs.push_back("str.match: 'regex' required");
-                    return X::Value();
+                    return Cas::Value();
                 }
                 
                 std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
@@ -153,35 +153,35 @@ namespace CasLang {
                     std::regex re(regexStr, flags);
                     std::smatch m;
                     if (std::regex_search(s, m, re)) {
-                        X::Dict res;
+                        Cas::Dict res;
                         res->Set("ok", true);
                         res->Set("match", m.str());
                         res->Set("pos", (long long)m.position());
                         
-                        X::List groups;
+                        Cas::List groups;
                         for (size_t i = 1; i < m.size(); ++i) {
                             groups += m[i].str();
                         }
                         res->Set("groups", groups);
                         
                         // Return as JSON string to match spec "stringified JSON object"
-                         // Actually spec says "stringified JSON object" BUT usually X::Value returned is kept as Object if "as" var handles it. 
+                         // Actually spec says "stringified JSON object" BUT usually Cas::Value returned is kept as Object if "as" var handles it. 
                          // However, for consistency with Spec 7C.9, it says "stringified JSON object".
-                         // BUT looking at other ops, they return X::Value directly.
-                         // Let's return X::Dict, and let the caller handle it.
+                         // BUT looking at other ops, they return Cas::Value directly.
+                         // Let's return Cas::Dict, and let the caller handle it.
                          // WAIT, Spec says "boolean false if no match OR a stringified JSON object".
-                         // To avoid mixed types issue in some systems, returning X::Value (Dict) is best for internal execution.
+                         // To avoid mixed types issue in some systems, returning Cas::Value (Dict) is best for internal execution.
                          // But if spec requires stringified, we should ToString(). 
-                         // Let's stick to returning X::Value (Dict/Bool) which is more useful within CasLang Runtime. 
+                         // Let's stick to returning Cas::Value (Dict/Bool) which is more useful within CasLang Runtime. 
                          // The "Stringified JSON" in spec usually means the 'as' variable will hold an object that was parsed from string or just the object itself.
-                         // Given CasRunner structure, we return X::Value.
+                         // Given CasRunner structure, we return Cas::Value.
                          return res; 
                     } else {
-                        return X::Value(false);
+                        return Cas::Value(false);
                     }
                 } catch (const std::exception& e) {
                     errs.push_back(std::string("str.match regex error: ") + e.what());
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
 
@@ -190,7 +190,7 @@ namespace CasLang {
                 std::string caseMode = S("case");
                 if (regexStr.empty()) {
                     errs.push_back("str.count_match: 'regex' required");
-                    return X::Value();
+                    return Cas::Value();
                 }
 
                 std::regex_constants::syntax_option_type flags = std::regex_constants::ECMAScript;
@@ -201,15 +201,15 @@ namespace CasLang {
                     auto begin = std::sregex_iterator(s.begin(), s.end(), re);
                     auto end = std::sregex_iterator();
                     long long count = std::distance(begin, end);
-                    return X::Value(count);
+                    return Cas::Value(count);
                 } catch (const std::exception& e) {
                     errs.push_back(std::string("str.count_match regex error: ") + e.what());
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
 
             errs.push_back("str: unknown command " + command);
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

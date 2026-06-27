@@ -12,69 +12,69 @@ namespace CasLang {
         
         const std::string& Namespace() const override { return m_ns; }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts, 
+        Cas::Value Execute(const std::vector<std::string>& ns_parts, 
                          const std::string& command, 
-                         std::unordered_map<std::string, X::Value>& args, 
+                         std::unordered_map<std::string, Cas::Value>& args, 
                          CasContext& ctx, 
                          std::vector<std::string>& errs) override {
             
             if (command == "append") {
                 if (!args.count("list") || !args.count("value")) {
                     errs.push_back("list.append requires 'list' and 'value'");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::Value lVal = args["list"];
+                Cas::Value lVal = args["list"];
                 if (!lVal.IsList()) {
                     errs.push_back("list.append: 'list' is not a list");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::List list(lVal);
-                X::Value val = args["value"]; // non-const for API
+                Cas::List list(lVal);
+                Cas::Value val = args["value"]; // non-const for API
                 list->AddItem(val);
-                return X::Value(true);
+                return Cas::Value(true);
             }
             else if (command == "remove") {
                 if (!args.count("list") || !args.count("index")) {
                     errs.push_back("list.remove requires 'list' and 'index'");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::Value lVal = args["list"];
+                Cas::Value lVal = args["list"];
                 if (!lVal.IsList()) {
                     errs.push_back("list.remove: 'list' is not a list");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::List list(lVal);
+                Cas::List list(lVal);
                 long long idx = args["index"].isNumber() ? (long long)args["index"] : std::stoll(args["index"].asString());
                 long long size = list->Size();
-                if (idx < 0 || idx >= size) return X::Value(false);
+                if (idx < 0 || idx >= size) return Cas::Value(false);
 
                 // Rebuild list without item (Native RemoveAt invalid/unstable)
-                X::List newList;
+                Cas::List newList;
                 for (long long i = 0; i < size; i++) {
                     if (i == idx) continue;
-                    X::Value v = list->Get(i);
+                    Cas::Value v = list->Get(i);
                     newList->AddItem(v);
                 }
                 list->RemoveAll();
                 long long newSize = newList->Size();
                 for (long long i = 0; i < newSize; i++) {
-                    X::Value v = newList->Get(i);
+                    Cas::Value v = newList->Get(i);
                     list->AddItem(v);
                 }
-                return X::Value(true);
+                return Cas::Value(true);
             }
             else if (command == "len") {
                  if (!args.count("list")) {
                     errs.push_back("list.len requires 'list'");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::Value lVal = args["list"];
+                Cas::Value lVal = args["list"];
                 if (!lVal.IsList()) {
                     errs.push_back("list.len: 'list' is not a list");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::List list(lVal);
-                return X::Value((long long)list.Size());
+                Cas::List list(lVal);
+                return Cas::Value((long long)list.Size());
             }
             else if (command == "range") {
                 long long from = args.count("from") ? (long long)args["from"] : 0;
@@ -83,15 +83,15 @@ namespace CasLang {
                 
                 if (step == 0) step = 1;
                 
-                X::List list;
+                Cas::List list;
                 if (step > 0) {
                      for (long long i = from; i < to; i += step) {
-                         X::Value v(i);
+                         Cas::Value v(i);
                          list->AddItem(v);
                      }
                 } else {
                      for (long long i = from; i > to; i += step) {
-                         X::Value v(i);
+                         Cas::Value v(i);
                          list->AddItem(v);
                      }
                 }
@@ -101,7 +101,7 @@ namespace CasLang {
                 errs.push_back("Unknown command: " + command);
             }
 
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

@@ -8,8 +8,7 @@ cmake_policy(SET CMP0091 NEW)
 # Option to build Galaxy Filter
 option(BUILD_GALAXY_FILTER "Build Galaxy Filter" OFF)
 
-# Using local xlang_core for API
-include_directories("xlang_core")
+# Removed local xlang_core for API
 include_directories(.)
 include_directories(log)
 include_directories(core)
@@ -22,7 +21,6 @@ if(BUILD_GALAXY_FILTER)
     include_directories(filter)
 endif()
 
-FILE(GLOB XLANG_API_SRC "xlang_core/value.cpp")
 file(GLOB Log_SRC "log/*.cpp")
 # Core sources
 FILE(GLOB CORE_SRC "core/*.cpp")
@@ -38,7 +36,6 @@ endif()
 # Create the library
 add_library(${PROJECT_NAME} 
     STATIC
-    ${XLANG_API_SRC}
     ${Log_SRC}
     ${Main_SRC}
 )

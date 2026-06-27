@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <functional>
 #include <unordered_set>
-#include "value.h"
+#include "xlang_value.h"
 #include "CasExpression.h"
 #include "CasJsonOps.h"
 
@@ -35,8 +35,8 @@ namespace CasLang {
              std::string op = m[2];
              std::string rhs = m[3];
              
-             X::Value vL = EvaluateExpr(lhs);
-             X::Value vR = EvaluateExpr(rhs);
+             Cas::Value vL = EvaluateExpr(lhs);
+             Cas::Value vR = EvaluateExpr(rhs);
              
              if (vL.isNumber() && vR.isNumber()) {
                  double l = (double)vL;
@@ -59,7 +59,7 @@ namespace CasLang {
         if (t == "true" || t == "True") return true;
         if (t == "false" || t == "False") return false;
         
-        X::Value v = EvaluateExpr(t);
+        Cas::Value v = EvaluateExpr(t);
         return v.IsTrue();
     }
 
@@ -77,20 +77,20 @@ namespace CasLang {
     }
 
     // Convert ONLY scalars; arrays/objects are stringified JSON to keep scalar contract.
-    static X::Value toXScalar(const json& v) {
-        if (v.is_null())  return X::Value();
-        if (v.is_boolean()) return X::Value(v.get<bool>());
-        if (v.is_number_integer()) return X::Value((int64_t)v.get<long long>());
-        if (v.is_number_unsigned()) return X::Value((int64_t)v.get<unsigned long long>());
-        if (v.is_number_float()) return X::Value(v.get<double>());
-        if (v.is_string()) return X::Value(v.get<std::string>());
+    static Cas::Value toXScalar(const json& v) {
+        if (v.is_null())  return Cas::Value();
+        if (v.is_boolean()) return Cas::Value(v.get<bool>());
+        if (v.is_number_integer()) return Cas::Value((int64_t)v.get<long long>());
+        if (v.is_number_unsigned()) return Cas::Value((int64_t)v.get<unsigned long long>());
+        if (v.is_number_float()) return Cas::Value(v.get<double>());
+        if (v.is_string()) return Cas::Value(v.get<std::string>());
         // composite -> stringify
-        return X::Value(v.dump());
+        return Cas::Value(v.dump());
     }
 
     // JSONL parser: {"op":"ns.cmd", ...args}
     bool CasRunner::ParseLine(const std::string& line, std::string& ns, std::string& cmd,
-        std::unordered_map<std::string, X::Value>& args, std::string& outErr) {
+        std::unordered_map<std::string, Cas::Value>& args, std::string& outErr) {
         if (line.empty()) return false;
 
         // Parse as JSON object
@@ -191,7 +191,7 @@ namespace CasLang {
             std::string op;
             if (!TryParseOp(line, op)) {
                 return { false, "Line " + std::to_string(i + 1) +
-                    ": E1004 E_JSON_INVALID (must be a JSON object with 'op')", (int)i + 1, X::Value(), "final" };
+                    ": E1004 E_JSON_INVALID (must be a JSON object with 'op')", (int)i + 1, Cas::Value(), "final" };
             }
 
             // Check for block-set start
@@ -201,7 +201,7 @@ namespace CasLang {
                     if (j.contains("mode") && j["mode"].get<std::string>() == "block") {
                         if (!j.contains("nonce") || !j["nonce"].is_string()) {
                             return { false, "Line " + std::to_string(i + 1) +
-                                ": E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)i + 1, X::Value(), "final" };
+                                ": E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)i + 1, Cas::Value(), "final" };
                         }
                         blockName = j.value("name", "");
                         blockNonce = j["nonce"].get<std::string>();
@@ -218,22 +218,22 @@ namespace CasLang {
             else if (op == "flow.retry_start") scopeStack.push_back("retry");
             else if (op == "flow.loop_end") {
                 if (scopeStack.empty() || scopeStack.back() != "loop")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.loop_end", (int)i + 1, X::Value(), "final" };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.loop_end", (int)i + 1, Cas::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.retry_end") {
                 if (scopeStack.empty() || scopeStack.back() != "retry")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2310 Unexpected flow.retry_end", (int)i + 1, X::Value(), "final" };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2310 Unexpected flow.retry_end", (int)i + 1, Cas::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.endif") {
                 if (scopeStack.empty() || scopeStack.back() != "if")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.endif", (int)i + 1, X::Value(), "final" };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.endif", (int)i + 1, Cas::Value(), "final" };
                 scopeStack.pop_back();
             }
             else if (op == "flow.else") {
                  if (scopeStack.empty() || scopeStack.back() != "if")
-                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, X::Value(), "final" };
+                    return { false, "Line " + std::to_string(i + 1) + ": E2301 Unexpected flow.else (not in if)", (int)i + 1, Cas::Value(), "final" };
             }
             // Catch unknown flow commands during validation
             else if (op.substr(0, 5) == "flow." && op != "flow.set" && op != "flow.break" 
@@ -243,19 +243,19 @@ namespace CasLang {
                 if (badCmd == "end_if") hint = " (did you mean flow.endif?)";
                 else if (badCmd == "elseif" || badCmd == "elif") hint = " (not supported, use flow.endif then flow.if)";
                 else if (badCmd == "end_set") hint = " (flow.end_set only closes block-set mode, check your nonce)";
-                return { false, "Line " + std::to_string(i + 1) + ": E2002 E_FLOW_UNKNOWN: Unknown flow command: " + op + hint, (int)i + 1, X::Value(), "final" };
+                return { false, "Line " + std::to_string(i + 1) + ": E2002 E_FLOW_UNKNOWN: Unknown flow command: " + op + hint, (int)i + 1, Cas::Value(), "final" };
             }
         }
 
         if (inBlock) {
-            return { false, "E2301 Unclosed block-set for variable '" + blockName + "'", (int)lines.size(), X::Value(), "final" };
+            return { false, "E2301 Unclosed block-set for variable '" + blockName + "'", (int)lines.size(), Cas::Value(), "final" };
         }
 
         if (!scopeStack.empty()) {
-            return { false, "Line " + std::to_string(lines.size()) + ": E2302 Unclosed scope: " + scopeStack.back(), (int)lines.size(), X::Value(), "final" };
+            return { false, "Line " + std::to_string(lines.size()) + ": E2302 Unclosed scope: " + scopeStack.back(), (int)lines.size(), Cas::Value(), "final" };
         }
 
-        return { true, "", -1, X::Value(), "final" };
+        return { true, "", -1, Cas::Value(), "final" };
     }
 
     // Helper: Extract "op" from a line by JSON parse.
@@ -316,7 +316,7 @@ namespace CasLang {
         m_ctx.continue_flag = false;
         m_ctx.return_flag = false;
         m_ctx.return_to = "final";
-        m_ctx._last = X::Value();
+        m_ctx._last = Cas::Value();
         m_ctx.logs.clear();
         m_ctx.externalHandler = m_externalHandler;
 
@@ -395,7 +395,7 @@ namespace CasLang {
                                 }
                                 blockAccum = std::move(unescaped);
                             }
-                            m_ctx.vars[blockVarName] = X::Value(blockAccum);
+                            m_ctx.vars[blockVarName] = Cas::Value(blockAccum);
                             inBlock = false;
                             blockAccum.clear();
                             pc++;
@@ -414,10 +414,10 @@ namespace CasLang {
             if (line[0] != '{') { pc++; continue; }
 
             std::string ns, cmd, err;
-            std::unordered_map<std::string, X::Value> args;
+            std::unordered_map<std::string, Cas::Value> args;
             if (!ParseLine(line, ns, cmd, args, err)) {
                  // Should be caught by validation, but just in case
-                 return { false, "Runtime Parsing Error: " + err, (int)pc + 1, X::Value(), "final" };
+                 return { false, "Runtime Parsing Error: " + err, (int)pc + 1, Cas::Value(), "final" };
             }
 
             // Substitute variables in args
@@ -446,7 +446,7 @@ namespace CasLang {
                                  if (inner.size() > 3 && inner.front() == '$' && inner[1] == '{' && inner.back() == '}') {
                                      std::string idxVarName = inner.substr(2, inner.size() - 3);
                                      if (m_ctx.vars.count(idxVarName)) {
-                                         X::Value idxVal = m_ctx.vars[idxVarName];
+                                         Cas::Value idxVal = m_ctx.vars[idxVarName];
                                          if (idxVal.isNumber()) {
                                              listIdx = (long long)idxVal;
                                              accessType = 2;
@@ -466,29 +466,29 @@ namespace CasLang {
 
                         if (accessType > 0) {
                             if (!m_ctx.vars.count(varName)) {
-                                return { false, "E2201 E_VAR_UNDEFINED: " + varName, (int)pc + 1, X::Value(), "final" };
+                                return { false, "E2201 E_VAR_UNDEFINED: " + varName, (int)pc + 1, Cas::Value(), "final" };
                             }
-                            X::Value base = m_ctx.vars[varName];
+                            Cas::Value base = m_ctx.vars[varName];
                             
                             if (accessType == 1) { // Dict
-                                if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, X::Value(), "final" };
-                                X::Dict d(base);
+                                if (!base.IsDict()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a dict", (int)pc + 1, Cas::Value(), "final" };
+                                Cas::Dict d(base);
                                 if (d->Has(keyName.c_str())) {
-                                    X::Value v = d[keyName.c_str()];
+                                    Cas::Value v = d[keyName.c_str()];
                                     if (v.isString()) { s = v.asString(); }
                                     else { kv.second = v; continue; }
                                 }
-                                else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, X::Value(), "final" };
+                                else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found in " + varName, (int)pc + 1, Cas::Value(), "final" };
                             }
                             else if (accessType == 2) { // List
-                                if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, X::Value(), "final" };
-                                X::List l(base);
-                                if (listIdx >= 0 && listIdx < l.Size()) {
-                                    X::Value v = l[(int)listIdx];
+                                if (!base.IsList()) return { false, "E2201 E_VAR_TYPE_ERROR: " + varName + " is not a list", (int)pc + 1, Cas::Value(), "final" };
+                                Cas::List l(base);
+                                if (listIdx >= 0 && listIdx < (int)l.Size()) {
+                                    Cas::Value v = l[(int)listIdx];
                                     if (v.isString()) { s = v.asString(); }
                                     else { kv.second = v; continue; }
                                 }
-                                else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, X::Value(), "final" };
+                                else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds for " + varName, (int)pc + 1, Cas::Value(), "final" };
                             }
                         }
                         else {
@@ -499,7 +499,7 @@ namespace CasLang {
                                 }
                             }
                             else if (m_ctx.vars.count(varName)) {
-                                X::Value v = m_ctx.vars[varName];
+                                Cas::Value v = m_ctx.vars[varName];
                                 if (v.isString()) { s = v.asString(); }
                                 else { kv.second = v; continue; }
                             }
@@ -529,7 +529,7 @@ namespace CasLang {
                                       if (inner.size() > 3 && inner.front() == '$' && inner[1] == '{' && inner.back() == '}') {
                                           std::string idxVarName = inner.substr(2, inner.size() - 3);
                                           if (m_ctx.vars.count(idxVarName)) {
-                                              X::Value idxVal = m_ctx.vars[idxVarName];
+                                              Cas::Value idxVal = m_ctx.vars[idxVarName];
                                               if (idxVal.isNumber()) {
                                                   listIdx = (long long)idxVal;
                                                   accessType = 2;
@@ -550,16 +550,16 @@ namespace CasLang {
                             std::string valStr = "null";
                             if (accessType > 0) {
                                  if (m_ctx.vars.count(varName)) {
-                                     X::Value base = m_ctx.vars[varName];
+                                     Cas::Value base = m_ctx.vars[varName];
                                      if (accessType == 1 && base.IsDict()) {
-                                         X::Dict d(base);
+                                         Cas::Dict d(base);
                                          if (d->Has(keyName.c_str())) valStr = d[keyName.c_str()].ToString();
-                                          else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, X::Value(), "final" };
+                                          else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, Cas::Value(), "final" };
                                      }
                                      else if (accessType == 2 && base.IsList()) {
-                                         X::List l(base);
-                                         if (listIdx >= 0 && listIdx < l.Size()) valStr = l[(int)listIdx].ToString();
-                                          else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, X::Value(), "final" };
+                                         Cas::List l(base);
+                                         if (listIdx >= 0 && listIdx < (int)l.Size()) valStr = l[(int)listIdx].ToString();
+                                          else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, Cas::Value(), "final" };
                                      }
                                  }
                             }
@@ -570,7 +570,7 @@ namespace CasLang {
                         }
                         pos++; 
                     }
-                    kv.second = X::Value(s);
+                    kv.second = Cas::Value(s);
                 }
             }
 
@@ -586,7 +586,7 @@ namespace CasLang {
                 if (cmd == "set") {
                     if (args.count("name") && args.count("value")) {
                         std::string name = args["name"].asString();
-                        X::Value val = args["value"];
+                        Cas::Value val = args["value"];
                         
                         // Check for Expression
                         if (val.isString()) {
@@ -598,16 +598,16 @@ namespace CasLang {
                             else if (sVal.size() >= 2 && (sVal.front() == '[' || sVal.front() == '{')) {
                                 // Optimization: Direct creation for empty structures
                                 if (sVal == "[]") {
-                                    val = X::List();
+                                    val = Cas::List();
                                 }
                                 else if (sVal == "{}") {
-                                    val = X::Dict();
+                                    val = Cas::Dict();
                                 }
                                 else {
                                     // Try to parse as JSON
                                     try {
                                         nlohmann::json parsed = nlohmann::json::parse(sVal);
-                                        X::Value vParsed = JsonToXValue(parsed);
+                                        Cas::Value vParsed = JsonToXValue(parsed);
                                         if (vParsed.IsList() || vParsed.IsDict()) {
                                             val = vParsed;
                                         }
@@ -622,22 +622,22 @@ namespace CasLang {
                         if (val.IsList() || val.IsDict()) {
                             bool handled = false;
                             if (val.IsList()) {
-                                X::List l(val);
+                                Cas::List l(val);
                                  if (l.Size() == 0) {
-                                     m_ctx.vars[name] = X::List();
+                                     m_ctx.vars[name] = Cas::List();
                                      handled = true;
                                  }
                             }
                             else if (val.IsDict()) {
-                                X::Dict d(val);
+                                Cas::Dict d(val);
                                  if (d.Size() == 0) {
-                                     m_ctx.vars[name] = X::Dict();
+                                     m_ctx.vars[name] = Cas::Dict();
                                      handled = true;
                                  }
                             }
                             
                             if (!handled) {
-                                X::Value vCopy = val;
+                                Cas::Value vCopy = val;
                                 vCopy.Clone(); 
                                 m_ctx.vars[name] = vCopy;
                             }
@@ -650,7 +650,7 @@ namespace CasLang {
                         std::string mode = args["mode"].asString();
                         if (mode == "block") {
                             if (!args.count("nonce")) {
-                                return { false, "E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)pc + 1, X::Value(), "final" };
+                                return { false, "E2101 E_ARG_MISSING: block mode requires 'nonce'", (int)pc + 1, Cas::Value(), "final" };
                             }
                             blockVarName = args["name"].asString();
                             blockNonce = args["nonce"].asString();
@@ -662,7 +662,7 @@ namespace CasLang {
                 else if (cmd == "end_set") {
                     // This should only be reached if not in block mode (mismatched)
                     // Block termination is handled above in the block collection loop
-                    return { false, "E2301 E_BLOCK_UNBALANCED: flow.end_set without matching block start", (int)pc + 1, X::Value(), "final" };
+                    return { false, "E2301 E_BLOCK_UNBALANCED: flow.end_set without matching block start", (int)pc + 1, Cas::Value(), "final" };
                 }
                 else if (cmd == "if") {
                     std::string cond = args["cond"].asString();
@@ -692,7 +692,7 @@ namespace CasLang {
                 else if (cmd == "loop_start") {
                      std::string varName = args["var"].asString();
                      // Check if 'in' is already a list (from variable substitution)
-                     X::Value listVal;
+                     Cas::Value listVal;
                      if (args["in"].IsList()) {
                          listVal = args["in"];
                      }
@@ -711,7 +711,7 @@ namespace CasLang {
                      }
 
                      if (!isErr && listVal.IsList()) {
-                         X::List list(listVal);
+                         Cas::List list(listVal);
                          long long size = list.Size();
                          
                          // Handle optional 'index' variable
@@ -749,7 +749,7 @@ namespace CasLang {
                              m_ctx.vars[varName] = list[idx];
                              // Set index variable if specified
                              if (!indexVarName.empty()) {
-                                 m_ctx.vars[indexVarName] = X::Value(idx);
+                                 m_ctx.vars[indexVarName] = Cas::Value(idx);
                              }
                              // Proceed to next line (body)
                          } else {
@@ -859,9 +859,9 @@ namespace CasLang {
                         //   {"name":"seek_by_text","input_text":"...","as":"result","timeout_ms":30000}
                         // CasFilter::ExecuteExternalTool expects:
                         //   args["name"] = tool name
-                        //   args["args"] = X::Dict of tool parameters
+                        //   args["args"] = Cas::Dict of tool parameters
                         //   args["timeout_ms"] = optional timeout
-                        // So we strip reserved keys and pack the rest into an X::Dict.
+                        // So we strip reserved keys and pack the rest into an Cas::Dict.
 
                         // Save reserved values before rebuilding
                         std::string asVar;
@@ -873,14 +873,14 @@ namespace CasLang {
                         };
 
                         // Pack non-reserved keys into a dict for the tool
-                        X::Dict toolArgs;
+                        Cas::Dict toolArgs;
                         for (auto& kv : args) {
                             if (reservedKeys.count(kv.first)) continue;
                             toolArgs->Set(kv.first.c_str(), kv.second);
                         }
 
                         // Rebuild args map for the external handler interface
-                        std::unordered_map<std::string, X::Value> handlerArgs;
+                        std::unordered_map<std::string, Cas::Value> handlerArgs;
                         if (args.count("name"))       handlerArgs["name"] = args["name"];
                         if (args.count("timeout_ms")) handlerArgs["timeout_ms"] = args["timeout_ms"];
                         handlerArgs["args"] = toolArgs;
@@ -918,12 +918,12 @@ namespace CasLang {
                     }
                     else {
                         LogError(errMsg + " (Retry exhausted)");
-                        return { false, errMsg, (int)pc + 1, X::Value(), "final" };
+                        return { false, errMsg, (int)pc + 1, Cas::Value(), "final" };
                     }
                 }
                 else {
                     LogError(errMsg);
-                    return { false, errMsg, (int)pc + 1, X::Value(), "final" };
+                    return { false, errMsg, (int)pc + 1, Cas::Value(), "final" };
                 }
             }
 

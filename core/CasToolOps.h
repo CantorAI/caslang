@@ -10,9 +10,9 @@ namespace CasLang {
             return k;
         }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts,
+        Cas::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
-            std::unordered_map<std::string, X::Value>& args,
+            std::unordered_map<std::string, Cas::Value>& args,
             CasContext& ctx,
             std::vector<std::string>& errs) override
         {
@@ -22,11 +22,11 @@ namespace CasLang {
                     return ctx.externalHandler("tool", "call", args, ctx.metaData);
                 } else {
                     errs.push_back("E5001 E_NO_HANDLER: No external handler for tool.call");
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
             errs.push_back("tool: unknown command " + command);
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

@@ -1,32 +1,32 @@
 #pragma once
 #include "CasOps.h"
 #include <string>
-#include "value.h"
+#include "xlang_value.h"
 #include <nlohmann/json.hpp>
 
-// Convert JSON to X::Value
-inline X::Value JsonToXValue(const nlohmann::json& j) {
-    if (j.is_null()) return X::Value();
-    if (j.is_boolean()) return X::Value(j.get<bool>());
-    if (j.is_number_integer()) return X::Value((int64_t)j.get<int64_t>());
-    if (j.is_number_unsigned()) return X::Value((int64_t)j.get<uint64_t>());
-    if (j.is_number_float()) return X::Value(j.get<double>());
-    if (j.is_string()) return X::Value(j.get<std::string>());
+// Convert JSON to Cas::Value
+inline Cas::Value JsonToXValue(const nlohmann::json& j) {
+    if (j.is_null()) return Cas::Value();
+    if (j.is_boolean()) return Cas::Value(j.get<bool>());
+    if (j.is_number_integer()) return Cas::Value((int64_t)j.get<int64_t>());
+    if (j.is_number_unsigned()) return Cas::Value((int64_t)j.get<uint64_t>());
+    if (j.is_number_float()) return Cas::Value(j.get<double>());
+    if (j.is_string()) return Cas::Value(j.get<std::string>());
     if (j.is_array()) {
-        X::List l;
+        Cas::List l;
         for (auto& e : j) l->AddItem(JsonToXValue(e));
         return l;
     }
     if (j.is_object()) {
-        X::Dict d;
+        Cas::Dict d;
         for (auto& el : j.items()) d->Set(el.key(), JsonToXValue(el.value()));
         return d;
     }
-    return X::Value();
+    return Cas::Value();
 }
 
-// Convert X::Value to JSON
-inline nlohmann::json XValueToJson(const X::Value& val) {
+// Convert Cas::Value to JSON
+inline nlohmann::json XValueToJson(const Cas::Value& val) {
     if (val.IsNone() || !val.IsValid()) return nullptr;
     if (val.isBool()) return val.asBool();
     if (val.isNumber()) {
@@ -35,16 +35,16 @@ inline nlohmann::json XValueToJson(const X::Value& val) {
     }
     if (val.isString()) return val.asString();
     if (val.IsList()) {
-        X::List l(val);
+        Cas::List l(val);
         nlohmann::json j = nlohmann::json::array();
         long long sz = l->Size();
         for (long long i = 0; i < sz; i++) j.push_back(XValueToJson(l->Get(i)));
         return j;
     }
     if (val.IsDict()) {
-        X::Dict d(val);
+        Cas::Dict d(val);
         nlohmann::json j = nlohmann::json::object();
-        d->Enum([&](X::Value& k, X::Value& v) {
+        d->Enum([&](Cas::Value& k, Cas::Value& v) {
             j[k.asString()] = XValueToJson(v);
         });
         return j;
@@ -60,9 +60,9 @@ namespace CasLang {
         
         const std::string& Namespace() const override { return m_ns; }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts, 
+        Cas::Value Execute(const std::vector<std::string>& ns_parts, 
                          const std::string& command, 
-                         std::unordered_map<std::string, X::Value>& args, 
+                         std::unordered_map<std::string, Cas::Value>& args, 
                          CasContext& ctx, 
                          std::vector<std::string>& errs) override {
             
@@ -71,12 +71,12 @@ namespace CasLang {
                 // Usage: {"op":"json.parse","s":"${raw_json}","as":"obj"}
                 if (!args.count("s")) {
                     errs.push_back("json.parse requires 's' (JSON string)");
-                    return X::Value();
+                    return Cas::Value();
                 }
                 std::string s = args["s"].asString();
                 if (s.empty()) {
                     errs.push_back("json.parse: empty string");
-                    return X::Value();
+                    return Cas::Value();
                 }
                 
                 try {
@@ -87,12 +87,12 @@ namespace CasLang {
                     if (s.size() > 200) preview += "...";
                     errs.push_back(std::string("json.parse error: ") + e.what() 
                         + " | input preview: " + preview);
-                    return X::Value();
+                    return Cas::Value();
                 } catch (...) {
                     std::string preview = s.substr(0, 200);
                     if (s.size() > 200) preview += "...";
                     errs.push_back("json.parse: invalid JSON | input preview: " + preview);
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
             else if (command == "save") {
@@ -100,19 +100,19 @@ namespace CasLang {
                 // Usage: {"op":"json.save","obj":"${mydict}","as":"json_str"}
                 if (!args.count("obj")) {
                     errs.push_back("json.save requires 'obj' (dict or list)");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::Value obj = args["obj"];
+                Cas::Value obj = args["obj"];
                 
                 try {
                     nlohmann::json j = XValueToJson(obj);
-                    return X::Value(j.dump());
+                    return Cas::Value(j.dump());
                 } catch (const std::exception& e) {
                     errs.push_back(std::string("json.save error: ") + e.what());
-                    return X::Value();
+                    return Cas::Value();
                 } catch (...) {
                     errs.push_back("json.save: serialization failed");
-                    return X::Value();
+                    return Cas::Value();
                 }
             }
             else if (command == "query") {
@@ -121,9 +121,9 @@ namespace CasLang {
                 //        {"op":"json.query","obj":"${doc}","path":"items[*].name","as":"names"}
                 if (!args.count("obj") || !args.count("path")) {
                     errs.push_back("json.query requires 'obj' and 'path'");
-                    return X::Value();
+                    return Cas::Value();
                 }
-                X::Value obj = args["obj"];
+                Cas::Value obj = args["obj"];
                 std::string path = args["path"].asString();
                 
                 // Parse path into segments
@@ -144,7 +144,7 @@ namespace CasLang {
                             while (p < path.size() && (path[p] >= '0' && path[p] <= '9')) p++;
                             if (p == numStart) {
                                 errs.push_back("json.query: invalid index in path at position " + std::to_string(p));
-                                return X::Value();
+                                return Cas::Value();
                             }
                             long long idx = std::stoll(path.substr(numStart, p - numStart));
                             segs.push_back({Seg::INDEX, "", idx});
@@ -165,8 +165,8 @@ namespace CasLang {
                 }
                 
                 // Recursive traversal function
-                std::function<X::Value(X::Value, size_t)> traverse;
-                traverse = [&](X::Value cur, size_t si) -> X::Value {
+                std::function<Cas::Value(Cas::Value, size_t)> traverse;
+                traverse = [&](Cas::Value cur, size_t si) -> Cas::Value {
                     if (si >= segs.size()) return cur;
                     
                     const Seg& seg = segs[si];
@@ -174,40 +174,40 @@ namespace CasLang {
                     if (seg.type == Seg::KEY) {
                         if (!cur.IsDict()) {
                             errs.push_back("json.query: expected dict at '" + seg.key + "' but got non-dict");
-                            return X::Value();
+                            return Cas::Value();
                         }
-                        X::Dict d(cur);
+                        Cas::Dict d(cur);
                         if (!d->Has(seg.key.c_str())) {
                             errs.push_back("json.query: key '" + seg.key + "' not found");
-                            return X::Value();
+                            return Cas::Value();
                         }
-                        X::Value next = d[seg.key.c_str()];
+                        Cas::Value next = d[seg.key.c_str()];
                         return traverse(next, si + 1);
                     }
                     else if (seg.type == Seg::INDEX) {
                         if (!cur.IsList()) {
                             errs.push_back("json.query: expected list at index [" + std::to_string(seg.idx) + "] but got non-list");
-                            return X::Value();
+                            return Cas::Value();
                         }
-                        X::List l(cur);
-                        if (seg.idx < 0 || seg.idx >= l.Size()) {
+                        Cas::List l(cur);
+                        if (seg.idx < 0 || seg.idx >= (int)l.Size()) {
                             errs.push_back("json.query: index [" + std::to_string(seg.idx) + "] out of range (size=" + std::to_string(l.Size()) + ")");
-                            return X::Value();
+                            return Cas::Value();
                         }
-                        X::Value next = l[seg.idx];
+                        Cas::Value next = l[seg.idx];
                         return traverse(next, si + 1);
                     }
                     else { // WILDCARD [*]
                         if (!cur.IsList()) {
                             errs.push_back("json.query: [*] requires a list");
-                            return X::Value();
+                            return Cas::Value();
                         }
-                        X::List src(cur);
-                        X::List result;
+                        Cas::List src(cur);
+                        Cas::List result;
                         long long sz = src.Size();
                         for (long long i = 0; i < sz; i++) {
-                            X::Value elem = src[i];
-                            X::Value val = traverse(elem, si + 1);
+                            Cas::Value elem = src[i];
+                            Cas::Value val = traverse(elem, si + 1);
                             if (val.IsValid() && !val.IsNone()) {
                                 result->AddItem(val);
                             }
@@ -220,7 +220,7 @@ namespace CasLang {
             }
             
             errs.push_back("json: unknown command " + command);
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

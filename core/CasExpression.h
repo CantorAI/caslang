@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "value.h"
+#include "xlang_value.h"
 #include <string>
 #include <regex>
 #include <vector>
@@ -9,7 +9,7 @@ namespace CasLang {
 
     // Simple Expression Evaluator (Arithmetic + Logic)
     // Supports: + - * / ( ) on numbers, and basic boolean/null literals
-    inline X::Value EvaluateExpr(const std::string& expr) {
+    inline Cas::Value EvaluateExpr(const std::string& expr) {
         std::string s = expr;
         
         // Helper to trim
@@ -20,7 +20,7 @@ namespace CasLang {
         
         std::string t = s;
         trim(t);
-        if (t.empty()) return X::Value();
+        if (t.empty()) return Cas::Value();
         if (t[0] == '=') t = t.substr(1); 
         
         // MVP: Regex for binary ops with simplified precedence
@@ -51,35 +51,35 @@ namespace CasLang {
             std::string rightS = t.substr(splitPos + 1);
             char opChar = t[splitPos];
             
-            X::Value vL = EvaluateExpr(leftS);
-            X::Value vR = EvaluateExpr(rightS);
+            Cas::Value vL = EvaluateExpr(leftS);
+            Cas::Value vR = EvaluateExpr(rightS);
             
             double dL = vL.isNumber() ? (double)vL : 0;
             double dR = vR.isNumber() ? (double)vR : 0;
             
-            if (opChar == '+') return X::Value(dL + dR);
-            if (opChar == '-') return X::Value(dL - dR);
-            if (opChar == '*') return X::Value(dL * dR);
-            if (opChar == '/') return X::Value(dR != 0 ? dL / dR : 0);
+            if (opChar == '+') return Cas::Value(dL + dR);
+            if (opChar == '-') return Cas::Value(dL - dR);
+            if (opChar == '*') return Cas::Value(dL * dR);
+            if (opChar == '/') return Cas::Value(dR != 0 ? dL / dR : 0);
         }
         
         // Leaf: Number
         try {
             size_t idx;
             double d = std::stod(t, &idx);
-            if (idx == t.size()) return X::Value(d);
+            if (idx == t.size()) return Cas::Value(d);
         } catch(...) {}
         
         // Literals
-        if (t == "true") return X::Value(true);
-        if (t == "false") return X::Value(false);
-        if (t == "null") return X::Value();
+        if (t == "true") return Cas::Value(true);
+        if (t == "false") return Cas::Value(false);
+        if (t == "null") return Cas::Value();
         
         // String literal
         if (t.size()>=2 && ( (t.front()=='"'&&t.back()=='"') || (t.front()=='\''&&t.back()=='\'') )) {
-            return X::Value(t.substr(1, t.size()-2));
+            return Cas::Value(t.substr(1, t.size()-2));
         }
 
-        return X::Value(0); 
+        return Cas::Value(0); 
     }
 }

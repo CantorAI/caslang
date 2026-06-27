@@ -3,21 +3,21 @@
 #include <vector>
 #include <unordered_map>
 
-#include "value.h"
+#include "xlang_value.h"
 
 namespace CasLang {
-    using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args, const std::string& metaData)>;
+    using ExternalHandler = std::function<Cas::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, Cas::Value>& args, const std::string& metaData)>;
 
     struct CasContext {
-        std::unordered_map<std::string, X::Value> vars;
-        X::Value _last;
+        std::unordered_map<std::string, Cas::Value> vars;
+        Cas::Value _last;
         std::string metaData;
         
         // Flow control flags
         bool break_flag = false;
         bool continue_flag = false;
         bool return_flag = false;
-        X::Value return_value;
+        Cas::Value return_value;
         std::string return_to;  // "llm" (default) or "final"
 
         // Recursion/Loop limits could go here
@@ -49,9 +49,9 @@ namespace CasLang {
         virtual std::vector<CommandInfo> DescribeCommands() const { return {}; }
 
         // Execute a command
-        virtual X::Value Execute(const std::vector<std::string>& ns_parts, 
+        virtual Cas::Value Execute(const std::vector<std::string>& ns_parts, 
                                  const std::string& command, 
-                                 std::unordered_map<std::string, X::Value>& args, 
+                                 std::unordered_map<std::string, Cas::Value>& args, 
                                  CasContext& ctx, 
                                  std::vector<std::string>& errs) = 0;
     };

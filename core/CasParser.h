@@ -8,7 +8,7 @@
 #include <sstream>
 
 #include <nlohmann/json.hpp>
-#include "value.h"
+#include "xlang_value.h"
 
 using json = nlohmann::json;
 
@@ -17,7 +17,7 @@ namespace CasLang {
 struct ParsedAction {
     std::vector<std::string> ns; // e.g. {"fs"}
     std::string command;         // e.g. "open"
-    std::unordered_map<std::string, X::Value> args;
+    std::unordered_map<std::string, Cas::Value> args;
     size_t start = 0, end = 0;
     std::string error;
 };
@@ -104,15 +104,15 @@ public:
     }
 
     // Convert ONLY scalars; arrays/objects are stringified JSON to keep scalar contract.
-    static X::Value toXScalar(const json& v) {
-        if (v.is_null())  return X::Value();
-        if (v.is_boolean()) return X::Value(v.get<bool>());
-        if (v.is_number_integer()) return X::Value((int64_t)v.get<long long>());
-        if (v.is_number_unsigned()) return X::Value((int64_t)v.get<unsigned long long>());
-        if (v.is_number_float()) return X::Value(v.get<double>());
-        if (v.is_string()) return X::Value(v.get<std::string>());
+    static Cas::Value toXScalar(const json& v) {
+        if (v.is_null())  return Cas::Value();
+        if (v.is_boolean()) return Cas::Value(v.get<bool>());
+        if (v.is_number_integer()) return Cas::Value((int64_t)v.get<long long>());
+        if (v.is_number_unsigned()) return Cas::Value((int64_t)v.get<unsigned long long>());
+        if (v.is_number_float()) return Cas::Value(v.get<double>());
+        if (v.is_string()) return Cas::Value(v.get<std::string>());
         // composite -> stringify
-        return X::Value(v.dump());
+        return Cas::Value(v.dump());
     }
 };
 }

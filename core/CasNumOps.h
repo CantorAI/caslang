@@ -13,9 +13,9 @@ namespace CasLang {
             return k;
         }
 
-        X::Value Execute(const std::vector<std::string>& ns_parts,
+        Cas::Value Execute(const std::vector<std::string>& ns_parts,
             const std::string& command,
-            std::unordered_map<std::string, X::Value>& args,
+            std::unordered_map<std::string, Cas::Value>& args,
             CasContext& ctx,
             std::vector<std::string>& errs) override
         {
@@ -32,15 +32,15 @@ namespace CasLang {
             double a = D("a");
             double b = D("b");
 
-            if (command == "add") return X::Value(a + b);
-            if (command == "sub") return X::Value(a - b);
-            if (command == "mul") return X::Value(a * b);
+            if (command == "add") return Cas::Value(a + b);
+            if (command == "sub") return Cas::Value(a - b);
+            if (command == "mul") return Cas::Value(a * b);
             if (command == "div") {
-                if (b == 0.0) { errs.push_back("num.div: division by zero"); return X::Value(); }
-                return X::Value(a / b);
+                if (b == 0.0) { errs.push_back("num.div: division by zero"); return Cas::Value(); }
+                return Cas::Value(a / b);
             }
-            if (command == "min") return X::Value((std::min)(a, b));
-            if (command == "max") return X::Value((std::max)(a, b));
+            if (command == "min") return Cas::Value((std::min)(a, b));
+            if (command == "max") return Cas::Value((std::max)(a, b));
             if (command == "range") {
                 int start = (int)D("start", 0);
                 int end = (int)D("end", 10);
@@ -51,11 +51,11 @@ namespace CasLang {
                      res += std::to_string(i);
                 }
                 res += "]";
-                return X::Value(res);
+                return Cas::Value(res);
             }
 
             errs.push_back("num: unknown command " + command);
-            return X::Value();
+            return Cas::Value();
         }
     };
 }

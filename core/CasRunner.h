@@ -12,7 +12,7 @@ namespace CasLang {
         CasContext m_ctx;
 
         // Helpers
-        bool ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, X::Value>& args, std::string& outErr);
+        bool ParseLine(const std::string& line, std::string& ns, std::string& cmd, std::unordered_map<std::string, Cas::Value>& args, std::string& outErr);
         void LogError(const std::string& msg);
         
         // Scan for matching end block
@@ -25,7 +25,7 @@ namespace CasLang {
 
         void Register(std::unique_ptr<CasOps> op);
         
-        // using ExternalHandler = std::function<X::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, X::Value>& args)>;
+        // using ExternalHandler = std::function<Cas::Value(const std::string& ns, const std::string& cmd, std::unordered_map<std::string, Cas::Value>& args)>;
         void SetExternalHandler(ExternalHandler handler) { m_externalHandler = handler; }
         void SetMetaData(const std::string& md) { m_ctx.metaData = md; }
 
@@ -33,7 +33,7 @@ namespace CasLang {
             bool success;
             std::string error; // Last error
             int errorLine = -1;
-            X::Value output;   // Final output
+            Cas::Value output;   // Final output
             std::string return_to;  // "llm" (default) or "final"
         };
 
