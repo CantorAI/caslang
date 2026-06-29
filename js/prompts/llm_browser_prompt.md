@@ -18,6 +18,11 @@ Store live DOM elements into variables using the `"as"` parameter.
 * **Query Multiple Elements:** `{"op":"browser.query_all", "selector":".item-row", "as":"rows"}`
 * **Relative Querying:** `{"op":"browser.query", "element":"${parentDiv}", "selector":".child", "as":"childEl"}`
 
+### CSS Selector Best Practices
+* **Standard CSS3 Only:** Under the hood, the engine uses standard `document.querySelector()`. Do **NOT** hallucinate jQuery-specific pseudo-classes like `:contains("text")` or `:has()`. They will fail and throw `E3001`!
+* **Robustness:** Prioritize semantic/stable selectors (e.g., `[data-testid="submit"]`, `button[aria-label="Close"]`, `#nav-bar`) over brittle structure-based selectors (e.g., `div > div > span:nth-child(3)`).
+* **Text Search Workaround:** If you need to find an element by text, query all potential candidates using `browser.query_all` and iterate over them using `flow.loop_start`, checking `browser.get_text` with `str.contains`.
+
 ### Traversal
 * `{"op":"browser.parent", "element":"${el}", "as":"parent"}`
 * `{"op":"browser.children", "element":"${el}", "as":"children"}`
