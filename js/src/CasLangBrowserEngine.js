@@ -13,6 +13,7 @@ class CasLangBrowserEngine {
         this.jumps = {}; // Maps pc to jump target (e.g., loop_start -> loop_end)
         this.loopStates = {}; // Stores loop iterators
         this.logs = []; // Collects str.print and str.log output
+        this.session = {}; // Persistent KV state across execute() calls
     }
 
     async execute(jsonlString) {
@@ -106,6 +107,7 @@ class CasLangBrowserEngine {
                 else if (ns === 'time') await this._opTime(inst);
                 else if (ns === 'json') await this._opJson(inst);
                 else if (ns === 'browser') await this._opBrowser(inst);
+                else if (ns === 'session') await this._opSession(inst);
                 else {
                     throw new CasLangError("E2001", "E_OP_UNKNOWN: " + inst.op);
                 }
@@ -324,7 +326,16 @@ class CasLangBrowserEngine {
             this._setVar(inst.as, []);
         } else if (inst.op === 'list.append') {
             const lst = this._resolve(inst.list);
-            lst.push(this._resolve(inst.value));
+            if (!Array.isArray(lst)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list");
+            lst.push(this._resolve(inst.item));
+        } else if (inst.op === 'list.slice') {
+            const lst = this._resolve(inst.list);
+            if (!Array.isArray(lst) && !(lst instanceof NodeList)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list/NodeList");
+            const start = this._resolve(inst.start) || 0;
+            const end = this._resolve(inst.end);
+            
+            const arr = Array.from(lst);
+            this._setVar(inst.as, arr.slice(start, end !== undefined ? end : arr.length));
         } else {
             throw new CasLangError("E2001", "Unsupported list op: " + inst.op);
         }
@@ -376,6 +387,24 @@ class CasLangBrowserEngine {
             await new Promise(r => setTimeout(r, Number(this._resolve(inst.ms))));
         } else {
             throw new CasLangError("E2001", "Unsupported time op: " + inst.op);
+        }
+        this.pc++;
+    }
+
+    // Session KV Ops
+    async _opSession(inst) {
+        if (inst.op === 'session.set') {
+            this.session[inst.key] = this._resolve(inst.val);
+        } else if (inst.op === 'session.get') {
+            this._setVar(inst.as, this.session[inst.key]);
+        } else if (inst.op === 'session.clear') {
+            if (inst.key) {
+                delete this.session[inst.key];
+            } else {
+                this.session = {};
+            }
+        } else {
+            throw new CasLangError("E2001", "Unsupported session op: " + inst.op);
         }
         this.pc++;
     }

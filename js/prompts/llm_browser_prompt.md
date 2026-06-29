@@ -93,3 +93,24 @@ To define massive multiline strings (like raw HTML blocks or complex injected sc
 {"op":"browser.set_html", "element":"${targetDiv}", "html":"${myHtml}"}
 ```
 * **Rule:** The raw text MUST be sandwiched between the `flow.set` and `flow.end_set` commands. The `nonce` must match exactly.
+
+---
+
+## 6. Persistent Session State (`session.*`)
+Every execution of a CasLang script normally wipes local variables (`${vars}`). However, to process massive structures (like a 10,000-row table) across *multiple separate tool calls* without losing your place, you can use the persistent tab-scoped KV store.
+
+* **Set State:** `{"op":"session.set", "key":"cursor_offset", "val": 50}`
+* **Get State:** `{"op":"session.get", "key":"cursor_offset", "as":"offset"}`
+* **Clear State:** `{"op":"session.clear", "key":"cursor_offset"}` (Omit `key` to wipe the entire session).
+
+### Pagination Example
+If you are iterating over rows using `list.slice` (assuming you sliced rows 0-50 in a previous tool call):
+```jsonl
+{"op":"session.get", "key":"cursor_offset", "as":"start_idx"}
+{"op":"browser.query_all", "selector":"table tr", "as":"all_rows"}
+{"op":"flow.set", "name":"end_idx", "value":"${start_idx} + 50"}
+{"op":"list.slice", "list":"${all_rows}", "start":"${start_idx}", "end":"${end_idx}", "as":"chunk"}
+{"op":"session.set", "key":"cursor_offset", "val":"${end_idx}"}
+{"op":"flow.return", "value":"${chunk}"}
+```
+*(Note: If `session.get` fetches a key that doesn't exist, it evaluates to `null`, which evaluates to `0` in binary expressions).*
