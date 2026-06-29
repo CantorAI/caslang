@@ -23,7 +23,8 @@ namespace Cas {
         Double,
         Str,
         List,
-        Dict
+        Dict,
+        Bin
     };
 
     struct ValueData {
@@ -32,6 +33,10 @@ namespace Cas {
         std::string s;
         std::shared_ptr<ListImpl> list;
         std::shared_ptr<DictImpl> dict;
+        std::shared_ptr<std::vector<uint8_t>> bin;
+
+        ValueData() : l(0) {}
+        ~ValueData() {} 
     };
 
     class Dict;
@@ -52,15 +57,34 @@ namespace Cas {
         Value(List* l);
         Value(const Dict& d);
         Value(const List& l);
+        Value(const uint8_t* data, size_t size) : t(ValueType::Bin) {
+            x.bin = std::make_shared<std::vector<uint8_t>>(data, data + size);
+        }
         
         bool IsValid() const { return t != ValueType::Invalid; }
+        ValueType GetType() const { return t; }
         bool IsNone() const { return t == ValueType::None; }
         bool IsObject() const { return t == ValueType::List || t == ValueType::Dict || t == ValueType::Str; }
-        bool IsList() const { return t == ValueType::List; }
-        bool IsDict() const { return t == ValueType::Dict; }
+        bool isList() const { return t == ValueType::List; }
+        bool isDict() const { return t == ValueType::Dict; }
+        bool isBin() const { return t == ValueType::Bin; }
         bool isString() const { return t == ValueType::Str; }
         bool isNumber() const { return t == ValueType::Int64 || t == ValueType::Double; }
         bool isBool() const { return t == ValueType::Bool; }
+        
+        bool IsList() const { return isList(); }
+        bool IsDict() const { return isDict(); }
+        bool IsBin() const { return isBin(); }
+        bool IsString() const { return isString(); }
+        bool IsNumber() const { return isNumber(); }
+        bool IsBool() const { return isBool(); }
+
+        int64_t GetInt() const { return (t == ValueType::Int64) ? x.l : (t == ValueType::Double ? (int64_t)x.d : 0); }
+        double GetDouble() const { return (t == ValueType::Double) ? x.d : (t == ValueType::Int64 ? (double)x.l : 0.0); }
+        std::string GetString() const { return (t == ValueType::Str) ? x.s : asString(); }
+        std::shared_ptr<ListImpl> GetList() const { return x.list; }
+        std::shared_ptr<DictImpl> GetDict() const { return x.dict; }
+        std::shared_ptr<std::vector<uint8_t>> GetBin() const { return x.bin; }
 
         std::string asString() const;
         long long asNumber() const {
@@ -87,10 +111,6 @@ namespace Cas {
         
         bool operator==(const Value& other) const;
         bool operator!=(const Value& other) const { return !(*this == other); }
-        
-        // Expose shared_ptr access for List/Dict wrappers
-        std::shared_ptr<ListImpl> GetList() const { return x.list; }
-        std::shared_ptr<DictImpl> GetDict() const { return x.dict; }
         
         friend class Dict;
         friend class List;

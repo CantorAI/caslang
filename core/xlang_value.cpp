@@ -1,4 +1,4 @@
-﻿#include "xlang_value.h"
+#include "xlang_value.h"
 
 namespace Cas {
 
@@ -14,6 +14,10 @@ namespace Cas {
                 return ss.str();
             }
             case ValueType::Str: return x.s;
+            case ValueType::Bin: {
+                if (!x.bin || x.bin->empty()) return "b''";
+                return "b'[" + std::to_string(x.bin->size()) + " bytes]'";
+            }
             case ValueType::List: return "[List]"; // Placeholder for JSON serialization if needed
             case ValueType::Dict: return "{Dict}";
             default: return "";
@@ -27,6 +31,9 @@ namespace Cas {
         } else if (t == ValueType::Dict && x.dict) {
             auto newDict = std::make_shared<DictImpl>(*x.dict);
             x.dict = newDict;
+        } else if (t == ValueType::Bin && x.bin) {
+            auto newBin = std::make_shared<std::vector<uint8_t>>(*x.bin);
+            x.bin = newBin;
         }
     }
 
@@ -50,6 +57,11 @@ namespace Cas {
             case ValueType::Str: return x.s == other.x.s;
             case ValueType::List: return x.list == other.x.list; // pointer equality
             case ValueType::Dict: return x.dict == other.x.dict; // pointer equality
+            case ValueType::Bin: {
+                if (x.bin == other.x.bin) return true;
+                if (!x.bin || !other.x.bin) return false;
+                return *x.bin == *other.x.bin;
+            }
             default: return false;
         }
     }
