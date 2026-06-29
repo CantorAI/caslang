@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CasLang JS Interpreter - Interactive Search Test</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; height: 100vh; background-color: #1e1e1e; color: #d4d4d4; }
+        .header { margin-bottom: 20px; }
+        .main-content { display: flex; flex: 1; gap: 20px; overflow: hidden; }
+        .panel { flex: 1; display: flex; flex-direction: column; background: #2d2d2d; border: 1px solid #444; border-radius: 8px; padding: 15px; overflow: auto; }
+        textarea { flex: 1; background: #1e1e1e; color: #d4d4d4; font-family: monospace; border: 1px solid #555; padding: 10px; resize: none; margin-bottom: 10px; white-space: pre; }
+        button { background: #007acc; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; font-weight: bold; }
+        button:hover { background: #0098ff; }
+        
+        /* Mock DOM Styles */
+        .mock-dom { background: white; color: black; padding: 20px; border-radius: 4px; flex: 1; overflow-y: auto; }
+        .search-container { margin-bottom: 20px; }
+        #search-box { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 10px; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px; transition: background 0.2s; }
+        
+        #console-output { background: #000; color: #0f0; font-family: monospace; padding: 10px; margin-top: 20px; height: 150px; overflow-y: auto; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>CasLang JS Engine - Interactive Search Test</h2>
+        <p>Type a keyword into the Mock DOM Search Box, then hit "Run Script" to watch CasLang read it and highlight the matches!</p>
+    </div>
+    
+    <div class="main-content">
+        <!-- Editor Panel -->
+        <div class="panel">
+            <h3>JSONL Script</h3>
+            <textarea id="script-input">
+{"op":"caslang","version":"0.3"}
+{"op":"browser.query", "selector":"#search-box", "as":"inputEl"}
+{"op":"browser.get_value", "element":"${inputEl}", "as":"searchTerm"}
+{"op":"str.print", "msg":"Searching for keyword: ${searchTerm}"}
+{"op":"browser.query_all", "selector":".item", "as":"items"}
+{"op":"flow.loop_start", "var":"item", "in":"${items}"}
+  {"op":"browser.get_text", "element":"${item}", "as":"itemText"}
+  {"op":"str.contains", "s":"${itemText}", "sub":"${searchTerm}", "as":"isMatch"}
+  {"op":"flow.if", "cond":"${isMatch} == true"}
+    {"op":"str.log", "msg":"Found Match: ${itemText}"}
+    {"op":"browser.set_style", "element":"${item}", "prop":"backgroundColor", "val":"#fff59d"}
+    {"op":"browser.set_style", "element":"${item}", "prop":"fontWeight", "val":"bold"}
+  {"op":"flow.else"}
+    {"op":"browser.set_style", "element":"${item}", "prop":"backgroundColor", "val":"white"}
+    {"op":"browser.set_style", "element":"${item}", "prop":"fontWeight", "val":"normal"}
+  {"op":"flow.endif"}
+{"op":"flow.loop_end"}
+{"op":"flow.return", "value":"Search complete!"}
+</textarea>
+            <button id="run-btn">Run Script</button>
+        </div>
+
+        <!-- Mock DOM Panel -->
+        <div class="panel">
+            <h3>Mock DOM</h3>
+            <div class="mock-dom" id="mock-dom-root">
+                <div class="search-container">
+                    <input type="text" id="search-box" value="apple" placeholder="Type a fruit here...">
+                </div>
+                
+                <ul id="item-list">
+                    <li class="item">Red Apple</li>
+                    <li class="item">Banana</li>
+                    <li class="item">Green Apple</li>
+                    <li class="item">Cherry</li>
+                    <li class="item">Watermelon</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div id="console-output">Ready...</div>
+
+    <!-- Load the Engine and App Logic -->
+    <script src="../../js/src/CasLangBrowserEngine.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
