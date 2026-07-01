@@ -327,7 +327,7 @@ class CasLangBrowserEngine {
         } else if (inst.op === 'list.append') {
             const lst = this._resolve(inst.list);
             if (!Array.isArray(lst)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list");
-            lst.push(this._resolve(inst.item));
+            lst.push(this._resolve(inst.value !== undefined ? inst.value : inst.item));
         } else if (inst.op === 'list.slice') {
             const lst = this._resolve(inst.list);
             if (!Array.isArray(lst) && !(lst instanceof NodeList)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list/NodeList");
