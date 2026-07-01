@@ -46,8 +46,12 @@ All browser ops operate either on a CSS `selector` string, or directly on an `el
 ```json
 {"op":"browser.query", "selector":"#my-id", "as":"el"}
 {"op":"browser.query_all", "selector":"tr.data-row", "as":"elements"}
+{"op":"browser.visible_text_nodes", "as":"nodes", "max":300, "chunk_size":700, "store":true}
+{"op":"browser.get_text_node_chunks", "scan_id":"txtscan_...", "requests":[{"node_id":"n0","offset_start":700,"offset_end":2100}], "as":"chunks"}
 ```
 * Finds elements. `query_all` returns a list. If `element` is provided (e.g. `"element":"${parentEl}"`), queries are scoped within that parent.
+* `browser.visible_text_nodes` returns visible text-node preview records in page reading order, sorted with viewport-visible nodes first. Each record includes `text`, `scan_id`, `node_id`, `offset_start`, `offset_end`, `original_length`, `has_more`, `source_hint`, `evidence`, `confidence`, parent `tag`, `role`, `aria_label`, `placeholder`, `rect`, `font_size`, `font_weight`, and `in_viewport`. With `store:true`, full node text is cached in tab session state for later chunk expansion.
+* `browser.get_text_node_chunks` reads requested offsets from a stored visible text-node scan. It is used when a text node was too large for the first pass and the caller needs more chunks.
 
 ```json
 {"op":"browser.parent", "element":"${el}", "as":"parentEl"}

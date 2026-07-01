@@ -17,6 +17,8 @@ Store live DOM elements into variables using the `"as"` parameter.
 * **Query Single Element:** `{"op":"browser.query", "selector":"#login-btn", "as":"btn"}`
 * **Query Multiple Elements:** `{"op":"browser.query_all", "selector":".item-row", "as":"rows"}`
 * **Relative Querying:** `{"op":"browser.query", "element":"${parentDiv}", "selector":".child", "as":"childEl"}`
+* **Visible Text Nodes:** `{"op":"browser.visible_text_nodes", "as":"nodes", "max":300, "chunk_size":700, "store":true}` returns read-only visible text-node preview records with text, offsets, `has_more`, and lightweight parent/rect metadata. Use this for text-first page understanding.
+* **Text Node Chunks:** `{"op":"browser.get_text_node_chunks", "scan_id":"txtscan_...", "requests":[{"node_id":"n0","offset_start":700,"offset_end":2100}], "as":"chunks"}` expands stored text-node chunks from tab session state.
 
 ### CSS Selector Best Practices
 * **Standard CSS3 Only:** Under the hood, the engine uses standard `document.querySelector()`. Do **NOT** hallucinate jQuery-specific pseudo-classes like `:contains("text")` or `:has()`. They will fail and throw `E3001`!

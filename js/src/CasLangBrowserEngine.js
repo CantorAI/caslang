@@ -1,3 +1,4 @@
+(() => {
 class CasLangError extends Error {
     constructor(code, msg) {
         super(msg);
@@ -6,6 +7,8 @@ class CasLangError extends Error {
 }
 
 class CasLangBrowserEngine {
+    static version = "livecoach-visible-text-nodes-2026-07-01.1";
+
     constructor() {
         this.vars = {};
         this.pc = 0;
@@ -204,6 +207,60 @@ class CasLangBrowserEngine {
         this.vars[name] = value;
     }
 
+    _refName(ref) {
+        if (typeof ref !== 'string') return null;
+        const trimmed = ref.trim();
+        const exactMatch = /^\$\{([^}]+)\}$/.exec(trimmed);
+        if (exactMatch) return exactMatch[1].trim();
+        if (trimmed.startsWith("${") && trimmed.endsWith("}")) {
+            return trimmed.substring(2, trimmed.length - 1).trim();
+        }
+        return null;
+    }
+
+    _getExactRef(ref) {
+        const name = this._refName(ref);
+        if (!name) return { name: null, value: this._resolve(ref) };
+        return { name, value: this.vars[name] };
+    }
+
+    _toList(value) {
+        if (Array.isArray(value)) return value;
+        if (value === null || value === undefined || typeof value === 'string') return null;
+        if (typeof NodeList !== 'undefined' && value instanceof NodeList) return Array.from(value);
+        if (typeof HTMLCollection !== 'undefined' && value instanceof HTMLCollection) return Array.from(value);
+        if (typeof value.length === 'number') return Array.from(value);
+        if (typeof value[Symbol.iterator] === 'function') return Array.from(value);
+        return null;
+    }
+
+    _isDomNode(value) {
+        if (!value || typeof value !== 'object') return false;
+        if (typeof Node !== 'undefined' && value instanceof Node) return true;
+        return typeof value.nodeType === 'number' && typeof value.nodeName === 'string';
+    }
+
+    _isDict(value) {
+        return value !== null && typeof value === 'object' && !Array.isArray(value) && !this._isDomNode(value);
+    }
+
+    _debugType(value) {
+        if (value === null) return "null";
+        if (value === undefined) return "undefined";
+        if (Array.isArray(value)) return "array";
+        if (this._isDomNode(value)) return "dom-node";
+        return typeof value;
+    }
+
+    _queryRoot(inst) {
+        if (!inst.element) return document;
+        const root = this._resolve(inst.element);
+        if (!this._isDomNode(root) || typeof root.querySelector !== 'function') {
+            throw new CasLangError("E2103", "E_ARG_TYPE: element is not a queryable DOM node");
+        }
+        return root;
+    }
+
     // --- NAMESPACES ---
 
     async _opFlow(inst) {
@@ -238,8 +295,8 @@ class CasLangBrowserEngine {
             this.pc++;
         }
         else if (inst.op === 'flow.loop_start') {
-            const list = this._resolve(inst.in);
-            if (!Array.isArray(list) && !(list instanceof NodeList)) {
+            const list = this._toList(this._resolve(inst.in));
+            if (!list) {
                 throw new CasLangError("E2103", "E_ARG_TYPE: flow.loop_start 'in' must be a list/NodeList");
             }
             
@@ -323,19 +380,40 @@ class CasLangBrowserEngine {
     // List Ops
     async _opList(inst) {
         if (inst.op === 'list.new') {
-            this._setVar(inst.as, []);
+            this._setVar(inst.as || inst.name, []);
         } else if (inst.op === 'list.append') {
-            const lst = this._resolve(inst.list);
-            if (!Array.isArray(lst)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list");
+            const ref = this._getExactRef(inst.list);
+            let lst = ref.value;
+            if (!Array.isArray(lst)) {
+                const name = ref.name;
+                if (name && (
+                    lst === null ||
+                    lst === undefined ||
+                    (typeof lst === 'string' && lst.trim() === 'null')
+                )) {
+                    lst = [];
+                    this._setVar(name, lst);
+                } else if (name) {
+                    const normalized = this._toList(lst);
+                    if (!normalized) {
+                        lst = [];
+                        this._setVar(name, lst);
+                    } else {
+                        lst = normalized;
+                        this._setVar(name, lst);
+                    }
+                } else {
+                    throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list");
+                }
+            }
             lst.push(this._resolve(inst.value !== undefined ? inst.value : inst.item));
         } else if (inst.op === 'list.slice') {
-            const lst = this._resolve(inst.list);
-            if (!Array.isArray(lst) && !(lst instanceof NodeList)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list/NodeList");
+            const lst = this._toList(this._resolve(inst.list));
+            if (!lst) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a list/NodeList");
             const start = this._resolve(inst.start) || 0;
             const end = this._resolve(inst.end);
             
-            const arr = Array.from(lst);
-            this._setVar(inst.as, arr.slice(start, end !== undefined ? end : arr.length));
+            this._setVar(inst.as, lst.slice(start, end !== undefined ? end : lst.length));
         } else {
             throw new CasLangError("E2001", "Unsupported list op: " + inst.op);
         }
@@ -345,15 +423,29 @@ class CasLangBrowserEngine {
     // Dict Ops
     async _opDict(inst) {
         if (inst.op === 'dict.new') {
-            this._setVar(inst.as, {});
+            this._setVar(inst.as || inst.name, {});
         } else if (inst.op === 'dict.set') {
-            const dict = this._resolve(inst.dict);
-            let key = this._resolve(inst.key);
+            const ref = this._getExactRef(inst.dict);
+            let dict = ref.value;
+            const name = ref.name;
+            if (name && !this._isDict(dict)) {
+                dict = {};
+                this._setVar(name, dict);
+            }
+            if (!this._isDict(dict)) {
+                throw new CasLangError(
+                    "E2103",
+                    `E_ARG_TYPE: Target is not a dict ref=${String(inst.dict)} name=${name || ""} type=${this._debugType(dict)}`
+                );
+            }
+            let key = String(this._resolve(inst.key));
             if (key.startsWith("'") && key.endsWith("'")) key = key.substring(1, key.length - 1);
             dict[key] = this._resolve(inst.value);
         } else if (inst.op === 'dict.has') {
-            const dict = this._resolve(inst.dict);
-            let key = this._resolve(inst.key);
+            const ref = this._getExactRef(inst.dict);
+            const dict = ref.value;
+            if (!this._isDict(dict)) throw new CasLangError("E2103", "E_ARG_TYPE: Target is not a dict");
+            let key = String(this._resolve(inst.key));
             if (key.startsWith("'") && key.endsWith("'")) key = key.substring(1, key.length - 1);
             this._setVar(inst.as, key in dict);
         } else {
@@ -422,10 +514,150 @@ class CasLangBrowserEngine {
 
     // Browser Ops
     async _opBrowser(inst) {
+        const collectVisibleTextNodes = () => {
+            const maxNodes = Number(this._resolve(inst.max || 300));
+            const chunkSize = Number(this._resolve(inst.chunk_size || inst.max_chars_per_node || 700));
+            const includeOffscreen = Boolean(inst.include_offscreen);
+            const store = inst.store !== false;
+            const scanId = String(inst.scan_id ? this._resolve(inst.scan_id) : ("txtscan_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8)));
+            const viewportW = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => {
+                    const text = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+                    if (!text) return NodeFilter.FILTER_REJECT;
+                    if (!node.parentElement) return NodeFilter.FILTER_REJECT;
+                    const parent = node.parentElement;
+                    const tag = parent.tagName ? parent.tagName.toLowerCase() : '';
+                    if (['script', 'style', 'noscript', 'template'].includes(tag)) return NodeFilter.FILTER_REJECT;
+                    if (parent.closest('[hidden],[aria-hidden="true"]')) return NodeFilter.FILTER_REJECT;
+                    const style = window.getComputedStyle(parent);
+                    if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    const rect = parent.getBoundingClientRect();
+                    if (!rect || rect.width <= 0 || rect.height <= 0) return NodeFilter.FILTER_REJECT;
+                    const inViewport = rect.bottom >= 0 && rect.right >= 0 && rect.top <= viewportH && rect.left <= viewportW;
+                    if (!includeOffscreen && !inViewport) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            const nodes = [];
+            const fullNodes = [];
+            const seen = new Set();
+            let node;
+            while ((node = walker.nextNode()) && nodes.length < maxNodes) {
+                const parent = node.parentElement;
+                const text = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+                if (!text || seen.has(text)) continue;
+                seen.add(text);
+                const rect = parent.getBoundingClientRect();
+                const style = window.getComputedStyle(parent);
+                const inViewport = rect.bottom >= 0 && rect.right >= 0 && rect.top <= viewportH && rect.left <= viewportW;
+                const nodeId = "n" + fullNodes.length;
+                const meta = {
+                    source_hint: 'visible_text_node',
+                    evidence: 'Visible browser text node collected with TreeWalker.',
+                    confidence: inViewport ? 0.76 : 0.42,
+                    scan_id: scanId,
+                    node_id: nodeId,
+                    chunk_index: 0,
+                    offset_start: 0,
+                    offset_end: Math.min(text.length, chunkSize),
+                    original_length: text.length,
+                    has_more: text.length > chunkSize,
+                    tag: parent.tagName ? parent.tagName.toLowerCase() : '',
+                    role: parent.getAttribute('role') || '',
+                    aria_label: parent.getAttribute('aria-label') || '',
+                    placeholder: parent.getAttribute('placeholder') || '',
+                    rect: {
+                        x: Math.round(rect.x),
+                        y: Math.round(rect.y),
+                        w: Math.round(rect.width),
+                        h: Math.round(rect.height)
+                    },
+                    font_size: style.fontSize || '',
+                    font_weight: style.fontWeight || '',
+                    in_viewport: inViewport
+                };
+                fullNodes.push({ text, meta });
+                nodes.push({
+                    text: text.slice(0, chunkSize),
+                    ...meta
+                });
+            }
+            nodes.sort((a, b) => {
+                if (a.in_viewport !== b.in_viewport) return a.in_viewport ? -1 : 1;
+                if (a.rect.y !== b.rect.y) return a.rect.y - b.rect.y;
+                return a.rect.x - b.rect.x;
+            });
+            if (store) {
+                if (!this.session.livecoach_text_scans) this.session.livecoach_text_scans = {};
+                this.session.livecoach_text_scans[scanId] = {
+                    created_at: Date.now(),
+                    url: location.href,
+                    title: document.title,
+                    nodes: fullNodes
+                };
+                const scanIds = Object.keys(this.session.livecoach_text_scans)
+                    .sort((a, b) => this.session.livecoach_text_scans[a].created_at - this.session.livecoach_text_scans[b].created_at);
+                while (scanIds.length > 3) {
+                    const oldId = scanIds.shift();
+                    delete this.session.livecoach_text_scans[oldId];
+                }
+                this.session.livecoach_latest_text_scan_id = scanId;
+            }
+            return nodes;
+        };
+
+        const getTextNodeChunks = () => {
+            const scanId = String(inst.scan_id ? this._resolve(inst.scan_id) : (this.session.livecoach_latest_text_scan_id || ''));
+            const scans = this.session.livecoach_text_scans || {};
+            const scan = scans[scanId];
+            if (!scan) {
+                throw new CasLangError("E3001", "Text node scan not found: " + scanId);
+            }
+            const requests = this._resolve(inst.requests || []);
+            const maxChars = Number(this._resolve(inst.max_total_chars || 20000));
+            const chunks = [];
+            let used = 0;
+            for (const req of Array.isArray(requests) ? requests : []) {
+                const nodeId = String(req.node_id || '');
+                const nodeIndex = Number(nodeId.replace(/^n/, ''));
+                const entry = scan.nodes[nodeIndex];
+                if (!entry) continue;
+                const fullText = entry.text || '';
+                const start = Math.max(0, Number(req.offset_start || 0));
+                const requestedEnd = req.offset_end == null ? fullText.length : Number(req.offset_end);
+                const end = Math.min(fullText.length, requestedEnd, start + Math.max(0, maxChars - used));
+                if (end <= start) continue;
+                const text = fullText.slice(start, end);
+                used += text.length;
+                chunks.push({
+                    text,
+                    source_hint: 'visible_text_node_chunk',
+                    evidence: 'Expanded visible browser text node chunk from TreeWalker session cache.',
+                    confidence: entry.meta?.confidence || 0.6,
+                    scan_id: scanId,
+                    node_id: nodeId,
+                    offset_start: start,
+                    offset_end: end,
+                    original_length: fullText.length,
+                    has_more: end < fullText.length,
+                    tag: entry.meta?.tag || '',
+                    role: entry.meta?.role || '',
+                    rect: entry.meta?.rect || null,
+                    in_viewport: Boolean(entry.meta?.in_viewport)
+                });
+                if (used >= maxChars) break;
+            }
+            return chunks;
+        };
+
         const getEl = (inst) => {
             if (inst.element) {
                 const el = this._resolve(inst.element);
-                if (!(el instanceof Element || el instanceof Node)) {
+                if (!this._isDomNode(el)) {
                     throw new CasLangError("E2103", "E_ARG_TYPE: element is not a DOM node");
                 }
                 return el;
@@ -439,14 +671,20 @@ class CasLangBrowserEngine {
         };
 
         if (inst.op === 'browser.query') {
-            const parent = inst.element ? this._resolve(inst.element) : document;
+            const parent = this._queryRoot(inst);
             const el = parent.querySelector(this._resolve(inst.selector));
             this._setVar(inst.as, el);
         } 
         else if (inst.op === 'browser.query_all') {
-            const parent = inst.element ? this._resolve(inst.element) : document;
+            const parent = this._queryRoot(inst);
             const els = Array.from(parent.querySelectorAll(this._resolve(inst.selector)));
             this._setVar(inst.as, els);
+        }
+        else if (inst.op === 'browser.visible_text_nodes') {
+            this._setVar(inst.as, collectVisibleTextNodes());
+        }
+        else if (inst.op === 'browser.get_text_node_chunks') {
+            this._setVar(inst.as, getTextNodeChunks());
         }
         else if (inst.op === 'browser.parent') {
             this._setVar(inst.as, getEl(inst).parentElement);
@@ -526,3 +764,7 @@ class CasLangBrowserEngine {
         this.pc++;
     }
 }
+
+globalThis.CasLangBrowserEngine = CasLangBrowserEngine;
+globalThis.CasLangError = CasLangError;
+})();

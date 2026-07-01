@@ -354,6 +354,8 @@ namespace CasLang {
         std::string blockVarName;
         std::string blockNonce;
         std::string blockAccum;
+        bool blockInterpolate = true;
+        std::unordered_set<std::string> noInterpolateVars;
 
         // 3. PC Loop
         size_t pc = 0;
@@ -396,8 +398,11 @@ namespace CasLang {
                                 blockAccum = std::move(unescaped);
                             }
                             m_ctx.vars[blockVarName] = Cas::Value(blockAccum);
+                            if (!blockInterpolate) noInterpolateVars.insert(blockVarName);
+                            else noInterpolateVars.erase(blockVarName);
                             inBlock = false;
                             blockAccum.clear();
+                            blockInterpolate = true;
                             pc++;
                             continue;
                         }
@@ -500,7 +505,13 @@ namespace CasLang {
                             }
                             else if (m_ctx.vars.count(varName)) {
                                 Cas::Value v = m_ctx.vars[varName];
-                                if (v.isString()) { s = v.asString(); }
+                                if (v.isString()) {
+                                    if (noInterpolateVars.count(varName)) {
+                                        kv.second = v;
+                                        continue;
+                                    }
+                                    s = v.asString();
+                                }
                                 else { kv.second = v; continue; }
                             }
                         }
@@ -547,26 +558,33 @@ namespace CasLang {
                                   }
                             }
 
-                            std::string valStr = "null";
+                            std::string originalToken = s.substr(pos, end - pos + 1);
+                            std::string valStr = originalToken;
+                            bool resolved = false;
                             if (accessType > 0) {
                                  if (m_ctx.vars.count(varName)) {
                                      Cas::Value base = m_ctx.vars[varName];
                                      if (accessType == 1 && base.IsDict()) {
                                          Cas::Dict d(base);
-                                         if (d->Has(keyName.c_str())) valStr = d[keyName.c_str()].ToString();
+                                         if (d->Has(keyName.c_str())) { valStr = d[keyName.c_str()].ToString(); resolved = true; }
                                           else return { false, "E2206 E_INDEX_KEY_NOT_FOUND: Key '" + keyName + "' not found", (int)pc + 1, Cas::Value(), "final" };
                                      }
                                      else if (accessType == 2 && base.IsList()) {
                                          Cas::List l(base);
-                                         if (listIdx >= 0 && listIdx < (int)l.Size()) valStr = l[(int)listIdx].ToString();
+                                         if (listIdx >= 0 && listIdx < (int)l.Size()) { valStr = l[(int)listIdx].ToString(); resolved = true; }
                                           else return { false, "E2207 E_INDEX_OUT_OF_RANGE: Index " + std::to_string(listIdx) + " out of bounds", (int)pc + 1, Cas::Value(), "final" };
                                      }
                                  }
                             }
-                            else if (varName == "_last") valStr = m_ctx._last.IsValid() ? m_ctx._last.ToString() : "null";
-                            else if (m_ctx.vars.count(varName)) valStr = m_ctx.vars[varName].ToString();
+                            else if (varName == "_last") {
+                                if (m_ctx._last.IsValid()) { valStr = m_ctx._last.ToString(); resolved = true; }
+                            }
+                            else if (m_ctx.vars.count(varName)) { valStr = m_ctx.vars[varName].ToString(); resolved = true; }
                             
                             s.replace(pos, end - pos + 1, valStr);
+                            if (!resolved) pos += originalToken.size();
+                            else pos += valStr.size();
+                            continue;
                         }
                         pos++; 
                     }
@@ -654,6 +672,15 @@ namespace CasLang {
                             }
                             blockVarName = args["name"].asString();
                             blockNonce = args["nonce"].asString();
+                            blockInterpolate = true;
+                            if (args.count("interpolate")) {
+                                if (args["interpolate"].isBool()) blockInterpolate = args["interpolate"].asBool();
+                                else if (args["interpolate"].isString()) {
+                                    std::string interpolateValue = args["interpolate"].asString();
+                                    std::transform(interpolateValue.begin(), interpolateValue.end(), interpolateValue.begin(), ::tolower);
+                                    blockInterpolate = !(interpolateValue == "false" || interpolateValue == "0" || interpolateValue == "no");
+                                }
+                            }
                             inBlock = true;
                             blockAccum.clear();
                         }
