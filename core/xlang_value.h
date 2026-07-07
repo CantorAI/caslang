@@ -7,6 +7,7 @@
 #include <functional>
 #include <iostream>
 #include <sstream>
+#include <cstdint>
 
 namespace Cas {
 
@@ -49,6 +50,9 @@ namespace Cas {
         Value() {}
         Value(bool v) : t(ValueType::Bool) { x.l = v ? 1 : 0; }
         Value(int v) : t(ValueType::Int64) { x.l = v; }
+#if defined(__linux__) || defined(__APPLE__)
+        Value(int64_t v) : t(ValueType::Int64) { x.l = v; }
+#endif
         Value(long long v) : t(ValueType::Int64) { x.l = v; }
         Value(double v) : t(ValueType::Double) { x.d = v; }
         Value(const char* v) : t(ValueType::Str) { if (v) x.s = v; }
