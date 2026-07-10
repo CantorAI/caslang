@@ -5,7 +5,7 @@
 #include <system_error>
 #include <vector>
 
-#if (WIN32)
+#if defined(_WIN32) || defined(WIN32)
 #include <windows.h>
 #endif
 
@@ -17,7 +17,7 @@ namespace CasLang {
 
 // Helper function: UTF-8 to UTF-16
 inline std::wstring UTF8ToWString(const std::string& utf8) {
-#if (WIN32)
+#if defined(_WIN32) || defined(WIN32)
     if (utf8.empty()) return std::wstring();
     int wstrLength = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
     if (wstrLength <= 0) return std::wstring();
@@ -31,7 +31,7 @@ inline std::wstring UTF8ToWString(const std::string& utf8) {
 
 // Helper function to open input stream with Unicode support
 inline std::ifstream open_input_stream(const std::string& path, std::ios::openmode mode = std::ios::in) {
-#if (WIN32)
+#if defined(_WIN32) || defined(WIN32)
     std::wstring widePath = UTF8ToWString(path);
     return std::ifstream(widePath.c_str(), mode);
 #else
@@ -41,7 +41,7 @@ inline std::ifstream open_input_stream(const std::string& path, std::ios::openmo
 
 // Helper function to open output stream with Unicode support
 inline std::ofstream open_output_stream(const std::string& path, std::ios::openmode mode = std::ios::out) {
-#if (WIN32)
+#if defined(_WIN32) || defined(WIN32)
     std::wstring widePath = UTF8ToWString(path);
     return std::ofstream(widePath.c_str(), mode);
 #else
@@ -51,7 +51,7 @@ inline std::ofstream open_output_stream(const std::string& path, std::ios::openm
 
 // Helper function to create filesystem path with Unicode support
 inline fs::path create_fs_path(const std::string& path) {
-#if (WIN32)
+#if defined(_WIN32) || defined(WIN32)
     std::wstring widePath = UTF8ToWString(path);
     return fs::path(widePath);
 #else

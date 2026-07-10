@@ -53,7 +53,9 @@ namespace Cas {
 #if defined(__linux__) || defined(__APPLE__)
         Value(int64_t v) : t(ValueType::Int64) { x.l = v; }
 #endif
+#if !defined(__APPLE__)
         Value(long long v) : t(ValueType::Int64) { x.l = v; }
+#endif
         Value(double v) : t(ValueType::Double) { x.d = v; }
         Value(const char* v) : t(ValueType::Str) { if (v) x.s = v; }
         Value(const std::string& v) : t(ValueType::Str) { x.s = v; }
