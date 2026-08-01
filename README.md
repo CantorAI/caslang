@@ -141,3 +141,7 @@ const std::string result = runtime.Run(script, options);
 Arguments and return values cross the host boundary as JSON. Setting
 `HostResponse::success` to `false` converts the host error into a CasLang
 execution error.
+
+For migrations of older source-tree integrations, configuring with
+`CASLANG_BUILD_COMPAT=ON` exposes the non-installed `CasLang::compat` target.
+It provides legacy core headers without making them part of the stable SDK.
