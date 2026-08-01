@@ -23,6 +23,7 @@ if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
     set(_caslang_build_cli_default ON)
 endif()
 option(CASLANG_BUILD_CLI "Build the CasLang command-line executable" ${_caslang_build_cli_default})
+option(CASLANG_BUILD_COMPAT "Expose build-tree-only legacy core headers" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -41,6 +42,16 @@ target_include_directories(caslang PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${CMAKE_CURRENT_SOURCE_DIR}/log
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann/include)
+
+if(CASLANG_BUILD_COMPAT)
+    add_library(caslang_compat INTERFACE)
+    add_library(CasLang::compat ALIAS caslang_compat)
+    target_include_directories(caslang_compat INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/core
+        ${CMAKE_CURRENT_SOURCE_DIR}/log
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann/include)
+    target_link_libraries(caslang_compat INTERFACE CasLang::caslang)
+endif()
 
 if(CASLANG_BUILD_CLI)
     add_executable(caslang_cli cli/main.cpp)
