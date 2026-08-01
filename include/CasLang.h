@@ -13,35 +13,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <CasLang.h>
+#pragma once
 
-#include <nlohmann/json.hpp>
-
-#include <iostream>
 #include <string>
 
-namespace {
+namespace CasLang {
 
-void PrintUsage() {
-    std::cerr << "Usage: caslang <script.cas>\n";
-}
+// Stable public facade for embedding the CasLang runtime. Results are encoded
+// as JSON so consumers do not depend on CasLang's internal value types.
+class Runtime final {
+public:
+    // Execute a UTF-8 CasLang JSONL program and return its JSON result.
+    std::string Run(const std::string& code) const;
 
-}  // namespace
+    // Execute a UTF-8 .cas file and return its JSON result.
+    std::string RunFile(const std::string& fileName) const;
+};
 
-int main(int argc, char** argv) {
-    if (argc != 2) {
-        PrintUsage();
-        return 64;
-    }
-
-    CasLang::Runtime runtime;
-    const std::string result = runtime.RunFile(argv[1]);
-    std::cout << result << '\n';
-
-    try {
-        const auto document = nlohmann::json::parse(result);
-        return document.value("success", false) ? 0 : 1;
-    } catch (...) {
-        return 1;
-    }
-}
+}  // namespace CasLang
