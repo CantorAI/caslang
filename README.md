@@ -1,7 +1,30 @@
+<!--
+Copyright (C) 2026 CantorAI Inc.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # caslang
 
 **A highly constrained, JSONL-based execution language for LLMs.**
 *(Note: Not intended for human developers to write by hand)*
+
+This is the canonical dependency-free CasLang runtime. It does not require
+XLang, Galaxy, Principia, or a product-specific host. Optional hosts provide
+capabilities through the stable tool boundary.
+
+- Normative language definitions: [`spec/`](spec/)
+- LLM training and evaluation records: [`corpus/`](corpus/)
+- Browser capability profile: [`js/`](js/)
 
 **caslang** replaces multi-step LLM tool calls with a **single, deterministically validated script** to achieve two core objectives:
 1. **Minimize Hallucinations**: Single-pass generation in a strict format reduces LLM errors.
@@ -29,7 +52,8 @@ ORDER BY timestamp DESC LIMIT 1000
 
 ### Example 2: Local File Automation
 
-caslang isn't just for backend tool calls—it can safely orchestrate local file operations to generate reports or process data on the host machine:
+CasLang is not limited to backend tool calls; it can safely orchestrate local
+file operations when the host capability manifest allows them:
 
 ```jsonl
 {"op":"caslang","version":"0.3"}
@@ -63,3 +87,14 @@ caslang isn't just for backend tool calls—it can safely orchestrate local file
 - A language intended for human developers to write manually.
 - A general-purpose programming language.
 - An agent framework or chat protocol.
+
+## Build and run
+
+```console
+cmake -S . -B build
+cmake --build build --config Release
+build/Release/caslang test/0_general/1_hello.cas
+```
+
+The build fetches only the header-only `nlohmann_json` dependency. The legacy
+XLang-hosted package is preserved separately in `CantorAI/caslang-xlang`.

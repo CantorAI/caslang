@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/CantorAI/caslang/spec/instruction.schema.json",
+  "title": "CasLang 0.3 instruction envelope",
+  "type": "object",
+  "required": ["op"],
+  "properties": {
+    "op": {
+      "type": "string",
+      "pattern": "^(caslang|[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*)$"
+    },
+    "version": {"type": "string", "const": "0.3"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"op": {"const": "caslang"}}},
+      "then": {"required": ["version"]}
+    }
+  ],
+  "additionalProperties": true
+}

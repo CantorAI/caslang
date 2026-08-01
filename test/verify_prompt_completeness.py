@@ -1,3 +1,16 @@
+# Copyright (C) 2026 CantorAI Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import re
 import os
 
@@ -110,10 +123,10 @@ def verify():
     extra_in_prompt = prompt_cmds - code_cmds
     
     # Filter out some known exceptions or false positives?
-    # e.g. #tool.call is in prompt but handled via external handler/CasFilter logic
+    # tool.call is implemented by the external host adapter.
     # We should add logic to whitelist tool.call if it's not found in C++ core scan
     if "tool.call" in extra_in_prompt:
-        extra_in_prompt.remove("tool.call") # Handled in CasFilter/Prompt logic specifically
+        extra_in_prompt.remove("tool.call") # Handled by the host adapter.
     
     # sandbox.exec is also special
     if "sandbox.exec" in extra_in_prompt:

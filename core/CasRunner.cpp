@@ -1,3 +1,18 @@
+/*
+Copyright (C) 2026 CantorAI Inc.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 #include "CasRunner.h"
 #include <sstream>
 #include <iostream>
@@ -6,7 +21,7 @@
 #include <algorithm>
 #include <functional>
 #include <unordered_set>
-#include "xlang_value.h"
+#include "cas_value.h"
 #include "CasExpression.h"
 #include "CasJsonOps.h"
 
@@ -162,6 +177,32 @@ namespace CasLang {
         bool inBlock = false;
         std::string blockName;
         std::string blockNonce;
+
+        size_t firstInstruction = lines.size();
+        for (size_t i = 0; i < lines.size(); ++i) {
+            if (!lines[i].empty()) {
+                firstInstruction = i;
+                break;
+            }
+        }
+        if (firstInstruction == lines.size()) {
+            return { false, "E1001 E_SCRIPT_EMPTY", 0, Cas::Value(), "final" };
+        }
+        try {
+            const json header = json::parse(lines[firstInstruction]);
+            if (!header.is_object() || header.value("op", "") != "caslang") {
+                return { false, "Line " + std::to_string(firstInstruction + 1) +
+                    ": E1006 E_HEADER_REQUIRED", static_cast<int>(firstInstruction + 1), Cas::Value(), "final" };
+            }
+            if (!header.contains("version") || !header["version"].is_string() ||
+                header["version"].get<std::string>() != "0.3") {
+                return { false, "Line " + std::to_string(firstInstruction + 1) +
+                    ": E1007 E_VERSION_UNSUPPORTED", static_cast<int>(firstInstruction + 1), Cas::Value(), "final" };
+            }
+        } catch (...) {
+            return { false, "Line " + std::to_string(firstInstruction + 1) +
+                ": E1004 E_JSON_INVALID", static_cast<int>(firstInstruction + 1), Cas::Value(), "final" };
+        }
 
         for (size_t i = 0; i < lines.size(); ++i) {
             std::string line = lines[i];
@@ -625,7 +666,7 @@ namespace CasLang {
                                     // Try to parse as JSON
                                     try {
                                         nlohmann::json parsed = nlohmann::json::parse(sVal);
-                                        Cas::Value vParsed = JsonToXValue(parsed);
+                                        Cas::Value vParsed = JsonToCasValue(parsed);
                                         if (vParsed.IsList() || vParsed.IsDict()) {
                                             val = vParsed;
                                         }
@@ -729,7 +770,7 @@ namespace CasLang {
                          if (listJson.size()>=2 && listJson.front()=='[' && listJson.back()==']') {
                              try {
                                  nlohmann::json parsed = nlohmann::json::parse(listJson);
-                                 listVal = JsonToXValue(parsed);
+                                 listVal = JsonToCasValue(parsed);
                              } catch (...) {}
                          } else {
                              errMsg = "loop_start: 'in' must be a JSON list found:" + listJson;
@@ -884,11 +925,9 @@ namespace CasLang {
                     try {
                         // v0.3 tool.call: args contains flat keys like
                         //   {"name":"seek_by_text","input_text":"...","as":"result","timeout_ms":30000}
-                        // CasFilter::ExecuteExternalTool expects:
-                        //   args["name"] = tool name
-                        //   args["args"] = Cas::Dict of tool parameters
-                        //   args["timeout_ms"] = optional timeout
-                        // So we strip reserved keys and pack the rest into an Cas::Dict.
+                        // The host tool adapter receives the tool name, packed
+                        // arguments, and optional timeout. Reserved CasLang fields
+                        // are not forwarded to the host tool.
 
                         // Save reserved values before rebuilding
                         std::string asVar;
