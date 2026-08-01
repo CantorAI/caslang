@@ -1,44 +1,52 @@
+# Copyright (C) 2026 CantorAI Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # CMakeList.txt : CMake project for CasLang Package
 #
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required(VERSION 3.20)
 
-project ("caslang")
+project(caslang VERSION 0.3.0 LANGUAGES CXX)
 cmake_policy(SET CMP0091 NEW)
 
-# Option to build Galaxy Filter
-option(BUILD_GALAXY_FILTER "Build Galaxy Filter" OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Removed local xlang_core for API
-include_directories(.)
-include_directories(log)
-include_directories(core)
-
-if(BUILD_GALAXY_FILTER)
-    add_definitions(-DBUILD_GALAXY_FILTER)
-    include_directories("../Galaxy/common")
-    include_directories("../Galaxy/log")
-    include_directories("../Galaxy/ThirdParty")
-    include_directories(filter)
+include(FetchContent)
+find_package(nlohmann_json 3.11 QUIET)
+if(NOT nlohmann_json_FOUND)
+    FetchContent_Declare(
+        nlohmann_json
+        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+        URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d)
+    FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
 file(GLOB Log_SRC "log/*.cpp")
 # Core sources
 FILE(GLOB CORE_SRC "core/*.cpp")
 
-set(Main_SRC ${CORE_SRC})
+add_library(caslang STATIC ${Log_SRC} ${CORE_SRC})
+target_include_directories(caslang PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/log>
+    $<INSTALL_INTERFACE:include/caslang>)
+target_link_libraries(caslang PUBLIC nlohmann_json::nlohmann_json)
 
-if(BUILD_GALAXY_FILTER)
-    FILE(GLOB FILTER_SRC "filter/*.cpp")
-    FILE(GLOB Common_SRC "../Galaxy/common/*.cpp" "../Galaxy/log/*.cpp")
-    list(APPEND Main_SRC ${FILTER_SRC} ${Common_SRC} )
-endif()
-
-# Create the library
-add_library(${PROJECT_NAME} 
-    STATIC
-    ${Log_SRC}
-    ${Main_SRC}
-)
+add_executable(caslang_cli cli/main.cpp)
+set_target_properties(caslang_cli PROPERTIES OUTPUT_NAME caslang)
+target_link_libraries(caslang_cli PRIVATE caslang)
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -51,10 +59,21 @@ if(MSVC)
         string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
     endforeach()
     
-    target_compile_options(${PROJECT_NAME} PRIVATE 
+    target_compile_options(caslang PRIVATE
+                          /utf-8
                           /EHsc       # Enable C++ exceptions
                           /D_CRT_SECURE_NO_WARNINGS
     )
 endif()
 
-# Touch to trigger re-glob
+if(MSVC)
+    target_compile_options(caslang_cli PRIVATE /utf-8)
+endif()
+
+include(GNUInstallDirs)
+install(TARGETS caslang caslang_cli
+    EXPORT caslangTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(DIRECTORY core/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caslang
+    FILES_MATCHING PATTERN "*.h")
