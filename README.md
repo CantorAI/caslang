@@ -123,3 +123,21 @@ const std::string result = runtime.Run(
 `Runtime::RunFile` executes a `.cas` file. Both methods return the runtime's
 JSON result as `std::string`; no internal `core/` header is part of the public
 API, and consumers do not need the `nlohmann_json` headers.
+
+Hosts expose native tools without depending on internal CasLang value types:
+
+```cpp
+CasLang::RunOptions options;
+options.metadata_json = R"({"device_id":"atlas-01"})";
+options.host_callback = [](const CasLang::HostRequest& request) {
+    CasLang::HostResponse response;
+    response.value_json = R"({"ok":true})";
+    return response;
+};
+
+const std::string result = runtime.Run(script, options);
+```
+
+Arguments and return values cross the host boundary as JSON. Setting
+`HostResponse::success` to `false` converts the host error into a CasLang
+execution error.

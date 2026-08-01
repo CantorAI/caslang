@@ -15,9 +15,30 @@ limitations under the License.
 
 #pragma once
 
+#include <functional>
 #include <string>
 
 namespace CasLang {
+
+struct HostRequest {
+    std::string name_space;
+    std::string operation;
+    std::string arguments_json;
+    std::string metadata_json;
+};
+
+struct HostResponse {
+    bool success = true;
+    std::string value_json = "null";
+    std::string error;
+};
+
+using HostCallback = std::function<HostResponse(const HostRequest&)>;
+
+struct RunOptions {
+    HostCallback host_callback;
+    std::string metadata_json;
+};
 
 // Stable public facade for embedding the CasLang runtime. Results are encoded
 // as JSON so consumers do not depend on CasLang's internal value types.
@@ -25,9 +46,11 @@ class Runtime final {
 public:
     // Execute a UTF-8 CasLang JSONL program and return its JSON result.
     std::string Run(const std::string& code) const;
+    std::string Run(const std::string& code, const RunOptions& options) const;
 
     // Execute a UTF-8 .cas file and return its JSON result.
     std::string RunFile(const std::string& fileName) const;
+    std::string RunFile(const std::string& fileName, const RunOptions& options) const;
 };
 
 }  // namespace CasLang
