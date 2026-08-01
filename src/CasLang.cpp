@@ -15,33 +15,19 @@ limitations under the License.
 
 #include <CasLang.h>
 
-#include <nlohmann/json.hpp>
+#include "../core/CasLangModule.h"
+#include "../core/cas_value.h"
 
-#include <iostream>
-#include <string>
+namespace CasLang {
 
-namespace {
-
-void PrintUsage() {
-    std::cerr << "Usage: caslang <script.cas>\n";
+std::string Runtime::Run(const std::string& code) const {
+    CasLangModule runtime;
+    return runtime.Runs(Cas::Value(code)).asString();
 }
 
-}  // namespace
-
-int main(int argc, char** argv) {
-    if (argc != 2) {
-        PrintUsage();
-        return 64;
-    }
-
-    CasLang::Runtime runtime;
-    const std::string result = runtime.RunFile(argv[1]);
-    std::cout << result << '\n';
-
-    try {
-        const auto document = nlohmann::json::parse(result);
-        return document.value("success", false) ? 0 : 1;
-    } catch (...) {
-        return 1;
-    }
+std::string Runtime::RunFile(const std::string& fileName) const {
+    CasLangModule runtime;
+    return runtime.Run(Cas::Value(fileName)).asString();
 }
+
+}  // namespace CasLang

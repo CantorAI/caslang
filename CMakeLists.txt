@@ -22,31 +22,27 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(FetchContent)
-find_package(nlohmann_json 3.11 QUIET)
-if(NOT nlohmann_json_FOUND)
-    FetchContent_Declare(
-        nlohmann_json
-        URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d)
-    FetchContent_MakeAvailable(nlohmann_json)
-endif()
+add_library(caslang_nlohmann_json INTERFACE)
+target_include_directories(caslang_nlohmann_json INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann/include)
 
 file(GLOB Log_SRC "log/*.cpp")
 # Core sources
 FILE(GLOB CORE_SRC "core/*.cpp")
 
-add_library(caslang STATIC ${Log_SRC} ${CORE_SRC})
+add_library(caslang STATIC ${Log_SRC} ${CORE_SRC} src/CasLang.cpp)
 target_include_directories(caslang PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/log>
-    $<INSTALL_INTERFACE:include/caslang>)
-target_link_libraries(caslang PUBLIC nlohmann_json::nlohmann_json)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
+target_include_directories(caslang PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/log)
+target_link_libraries(caslang PRIVATE caslang_nlohmann_json)
 
 add_executable(caslang_cli cli/main.cpp)
 set_target_properties(caslang_cli PROPERTIES OUTPUT_NAME caslang)
 target_link_libraries(caslang_cli PRIVATE caslang)
+target_link_libraries(caslang_cli PRIVATE caslang_nlohmann_json)
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -75,5 +71,5 @@ install(TARGETS caslang caslang_cli
     EXPORT caslangTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(DIRECTORY core/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/caslang
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h")

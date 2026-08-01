@@ -12,3 +12,8 @@ Files: corpus/seed/*.jsonl
 Copyright: 2026 CantorAI Inc.
 License: Apache-2.0
 Comment: Each corpus record also declares its data provenance and license.
+
+Files: third_party/nlohmann/LICENSE.MIT
+       third_party/nlohmann/include/nlohmann/json.hpp
+Copyright: 2013-2022 Niels Lohmann
+License: MIT

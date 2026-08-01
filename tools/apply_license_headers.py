@@ -76,6 +76,8 @@ def repository_files() -> list[Path]:
 def main() -> None:
     changed = 0
     for path in repository_files():
+        if ROOT / "third_party" in path.parents:
+            continue
         selected = style(path)
         if selected is None or not path.is_file() or path == Path(__file__):
             continue

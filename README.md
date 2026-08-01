@@ -96,5 +96,30 @@ cmake --build build --config Release
 build/Release/caslang test/0_general/1_hello.cas
 ```
 
-The build fetches only the header-only `nlohmann_json` dependency. The legacy
-XLang-hosted package is preserved separately in `CantorAI/caslang-xlang`.
+The header-only `nlohmann_json` dependency is vendored under `third_party/`, so
+clean builds do not require a dependency download. The legacy XLang-hosted
+package is preserved separately in `CantorAI/caslang-xlang`.
+
+## Embed the static library
+
+Add CasLang to a CMake application and link its public target:
+
+```cmake
+add_subdirectory(path/to/caslang)
+target_link_libraries(my_app PRIVATE caslang)
+```
+
+The application needs only the stable public header:
+
+```cpp
+#include <CasLang.h>
+
+CasLang::Runtime runtime;
+const std::string result = runtime.Run(
+    "{\"op\":\"caslang\",\"version\":\"0.3\"}\n"
+    "{\"op\":\"flow.return\",\"value\":\"hello\"}\n");
+```
+
+`Runtime::RunFile` executes a `.cas` file. Both methods return the runtime's
+JSON result as `std::string`; no internal `core/` header is part of the public
+API, and consumers do not need the `nlohmann_json` headers.
