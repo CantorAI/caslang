@@ -27,12 +27,17 @@ limitations under the License.
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <utility>
 
 namespace CasLang {
     CasLangModule::CasLangModule() {
     }
 
     Cas::Value CasLangModule::Run(Cas::Value valFileName) {
+        return Run(valFileName, ExternalHandler(), std::string());
+    }
+
+    Cas::Value CasLangModule::Run(Cas::Value valFileName, ExternalHandler handler, const std::string& metadata) {
         std::string fileName = valFileName.asString();
         std::cout << "[CasLang] Run file: " << fileName << std::endl;
         std::ifstream t(fileName);
@@ -48,10 +53,14 @@ namespace CasLang {
         }
         std::stringstream buffer;
         buffer << t.rdbuf();
-        return Runs(Cas::Value(buffer.str()));
+        return Runs(Cas::Value(buffer.str()), std::move(handler), metadata);
     }
 
     Cas::Value CasLangModule::Runs(Cas::Value valCode) {
+        return Runs(valCode, ExternalHandler(), std::string());
+    }
+
+    Cas::Value CasLangModule::Runs(Cas::Value valCode, ExternalHandler handler, const std::string& metadata) {
         std::string code = valCode.asString();
         std::cout << "[CasLang] Executing code:\n" << code << std::endl;
         
@@ -65,6 +74,8 @@ namespace CasLang {
         runner.Register(std::make_unique<CasToolOps>());
         runner.Register(std::make_unique<CasSandboxOps>());
         runner.Register(std::make_unique<CasJsonOps>());
+        if (handler) runner.SetExternalHandler(std::move(handler));
+        runner.SetMetaData(metadata);
 
         CasRunner::Result res = runner.Run(code);
         
@@ -75,15 +86,13 @@ namespace CasLang {
         Cas::Dict out;
         out->Set("success", res.success);
 
-        // Copy logs (COMMENTED OUT TO ISOLATE BRIDGE ISSUE)
-        /*
         Cas::List logs;
         for(const auto& l : runner.GetContext().logs) {
             Cas::Value v(l);
             logs->AddItem(v);
         }
         out->Set("logs", logs);
-        */
+        out->Set("return_to", res.return_to);
         if (res.success) {
             out->Set("data", res.output);
         } else {
