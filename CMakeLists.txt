@@ -63,6 +63,12 @@ endif()
 
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set_property(TARGET caslang PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    if(CASLANG_BUILD_CLI)
+        set_property(TARGET caslang_cli PROPERTY
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
     set(CompilerFlags
         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
@@ -77,6 +83,9 @@ if(MSVC)
                           /EHsc       # Enable C++ exceptions
                           /D_CRT_SECURE_NO_WARNINGS
     )
+    if(CASLANG_BUILD_COMPAT)
+        target_compile_options(caslang_compat INTERFACE /utf-8)
+    endif()
 endif()
 
 if(MSVC AND CASLANG_BUILD_CLI)
