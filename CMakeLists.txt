@@ -62,6 +62,7 @@ if(CASLANG_BUILD_CLI)
 endif()
 
 if(MSVC)
+    # Keep Debug on MTd so CasLang remains debuggable while Release uses MT.
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     set_property(TARGET caslang PROPERTY
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -75,14 +76,18 @@ if(MSVC)
         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
         CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
     foreach(CompilerFlag ${CompilerFlags})
+        string(REPLACE "/MDd" "/MTd" ${CompilerFlag} "${${CompilerFlag}}")
         string(REPLACE "/MD" "/MT" ${CompilerFlag} "${${CompilerFlag}}")
     endforeach()
-    
+
     target_compile_options(caslang PRIVATE
                           /utf-8
                           /EHsc       # Enable C++ exceptions
                           /D_CRT_SECURE_NO_WARNINGS
     )
+    target_compile_definitions(caslang PRIVATE
+                          _ITERATOR_DEBUG_LEVEL=0
+                          RTC_DCHECK_IS_ON=0)
     if(CASLANG_BUILD_COMPAT)
         target_compile_options(caslang_compat INTERFACE /utf-8)
     endif()
