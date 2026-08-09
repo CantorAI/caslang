@@ -25,7 +25,9 @@ namespace CasLang {
 
         CasLangModule();
         Cas::Value Run(Cas::Value fileName);
+        Cas::Value Run(Cas::Value fileName, ExternalHandler handler, const std::string& metadata);
         Cas::Value Runs(Cas::Value code);
+        Cas::Value Runs(Cas::Value code, ExternalHandler handler, const std::string& metadata);
         
         static void RunScript(const std::string& fileName);
     };
