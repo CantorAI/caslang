@@ -34,6 +34,7 @@ file(GLOB Log_SRC "log/*.cpp")
 FILE(GLOB CORE_SRC "core/*.cpp")
 
 add_library(caslang STATIC ${Log_SRC} ${CORE_SRC} src/CasLang.cpp)
+set_target_properties(caslang PROPERTIES POSITION_INDEPENDENT_CODE ON)
 add_library(CasLang::caslang ALIAS caslang)
 target_include_directories(caslang PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
